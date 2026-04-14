@@ -64,6 +64,28 @@ export default function WelcomeScreen() {
             </View>
           </View>
 
+          {/* Social proof */}
+          <View className="flex-row items-center mb-10 bg-dark-800/60 px-5 py-2.5 rounded-full">
+            <View className="flex-row mr-3">
+              {["bg-primary-500", "bg-safe-500", "bg-warning-500"].map(
+                (color, i) => (
+                  <View
+                    key={i}
+                    className={`w-6 h-6 rounded-full ${color} border-2 border-dark-900 items-center justify-center`}
+                    style={{ marginLeft: i > 0 ? -8 : 0 }}
+                  >
+                    <Text className="text-white text-[8px] font-bold">
+                      {["J", "M", "S"][i]}
+                    </Text>
+                  </View>
+                )
+              )}
+            </View>
+            <Text className="text-dark-300 text-xs">
+              Trusted by families everywhere
+            </Text>
+          </View>
+
           {/* Buttons */}
           <View className="w-full gap-4">
             <Link href="/(auth)/signup" asChild>

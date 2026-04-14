@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
-  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 // -- Mock Data --
 const CHILDREN = [
@@ -61,109 +61,23 @@ function statusLabel(s: "safe" | "active" | "no-session") {
 function statusColors(s: "safe" | "active" | "no-session") {
   switch (s) {
     case "safe":
-      return {
-        bg: "bg-safe-500/20",
-        text: "text-safe-500",
-        avatarBg: "bg-safe-500/15",
-        avatarText: "text-safe-400",
-        accent: "bg-safe-500",
-      };
+      return { bg: "bg-safe-500/20", text: "text-safe-500", accent: "bg-safe-500" };
     case "active":
-      return {
-        bg: "bg-warning-500/20",
-        text: "text-warning-500",
-        avatarBg: "bg-warning-500/15",
-        avatarText: "text-warning-400",
-        accent: "bg-warning-500",
-      };
+      return { bg: "bg-warning-500/20", text: "text-warning-500", accent: "bg-warning-500" };
     case "no-session":
-      return {
-        bg: "bg-dark-600/40",
-        text: "text-dark-400",
-        avatarBg: "bg-primary-500/15",
-        avatarText: "text-primary-400",
-        accent: "bg-dark-600",
-      };
+      return { bg: "bg-dark-600/40", text: "text-dark-400", accent: "bg-dark-600" };
   }
 }
 
-// -- Pulse dot component --
-function PulseDot() {
-  const opacity = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, {
-          toValue: 0.3,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    anim.start();
-    return () => anim.stop();
-  }, [opacity]);
-
-  return (
-    <Animated.View
-      style={{ opacity }}
-      className="w-3 h-3 rounded-full bg-warning-500"
-    />
-  );
-}
-
-// -- Activity timeline dot --
-function ActivityDot({ type }: { type: string }) {
-  const color =
-    type === "confirmed"
-      ? "bg-safe-500"
-      : type === "started"
-        ? "bg-primary-500"
-        : "bg-dark-400";
-  return (
-    <View className="items-center mt-0.5">
-      <View className={`w-3 h-3 rounded-full ${color}`} />
-      <View className="w-0.5 flex-1 bg-dark-700 mt-1" />
-    </View>
-  );
-}
-
-// -- Glow ring for Check In button --
-function GlowRing({ active }: { active: boolean }) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const opacity = useRef(new Animated.Value(0.35)).current;
-
-  useEffect(() => {
-    const anim = Animated.loop(
-      Animated.parallel([
-        Animated.timing(scale, {
-          toValue: 1.3,
-          duration: 1800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: 1800,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    anim.start();
-    return () => anim.stop();
-  }, [scale, opacity]);
-
-  return (
-    <Animated.View
-      className={`absolute w-44 h-44 rounded-full ${active ? "bg-danger-500" : "bg-primary-500"}`}
-      style={{ transform: [{ scale }], opacity }}
-    />
-  );
+// -- Activity icon --
+function ActivityIcon({ type }: { type: string }) {
+  if (type === "confirmed") {
+    return <Ionicons name="checkmark-circle" size={18} color="#22C55E" />;
+  }
+  if (type === "started") {
+    return <Ionicons name="play-circle" size={18} color="#6366F1" />;
+  }
+  return <Ionicons name="ellipse" size={18} color="#475569" />;
 }
 
 // -- Main Screen --
@@ -208,12 +122,19 @@ export default function HomeScreen() {
         <View className="px-5 pt-4 pb-2 flex-row items-center justify-between">
           <View>
             <View className="flex-row items-center gap-2.5 mb-1">
-              <View className="w-9 h-9 rounded-xl bg-primary-500 items-center justify-center">
-                <Text className="text-white text-sm font-bold">S</Text>
+              <View
+                className="w-9 h-9 rounded-xl bg-primary-500 items-center justify-center"
+                style={{
+                  shadowColor: "#6366F1",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 4,
+                  elevation: 4,
+                }}
+              >
+                <Ionicons name="shield-checkmark" size={18} color="#FFFFFF" />
               </View>
-              <Text className="text-white text-xl font-bold tracking-tight">
-                SafeStop
-              </Text>
+              <Text className="text-white text-xl font-bold tracking-tight">SafeStop</Text>
             </View>
             <Text className="text-dark-300 text-base mt-0.5">
               {greeting}, Sarah
@@ -247,12 +168,8 @@ export default function HomeScreen() {
                 <View className={`h-1 ${colors.accent}`} />
                 <View className="p-4 flex-row items-center justify-between">
                   <View className="flex-row items-center gap-3">
-                    <View
-                      className={`w-12 h-12 rounded-full ${colors.avatarBg} items-center justify-center`}
-                    >
-                      <Text
-                        className={`${colors.avatarText} text-lg font-bold`}
-                      >
+                    <View className="w-12 h-12 rounded-full bg-primary-500/15 items-center justify-center">
+                      <Text className="text-primary-400 text-lg font-bold">
                         {child.name[0]}
                       </Text>
                     </View>
@@ -277,41 +194,41 @@ export default function HomeScreen() {
         </View>
 
         {/* -- Check In Button -- */}
-        <View className="items-center mt-6 mb-4">
-          <View className="items-center justify-center">
-            <GlowRing active={!!activeSession} />
-            <GlowRing active={!!activeSession} />
-            <TouchableOpacity
-              onPress={handleCheckIn}
-              activeOpacity={0.8}
-              className={`w-44 h-44 rounded-full items-center justify-center ${
-                activeSession ? "bg-danger-500" : "bg-primary-500"
-              }`}
-              style={{
-                shadowColor: activeSession ? "#EF4444" : "#6366F1",
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.5,
-                shadowRadius: 20,
-                elevation: 16,
-              }}
-            >
-              <Text className="text-white text-3xl mb-1">
-                {activeSession ? "\u2713" : "\u25B6"}
-              </Text>
+        <View className="px-5 mt-5 mb-2">
+          <TouchableOpacity
+            onPress={handleCheckIn}
+            activeOpacity={0.8}
+            className={`h-16 rounded-2xl flex-row items-center justify-center gap-3 ${
+              activeSession ? "bg-danger-500" : "bg-primary-500"
+            }`}
+            style={{
+              shadowColor: activeSession ? "#EF4444" : "#6366F1",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.45,
+              shadowRadius: 16,
+              elevation: 12,
+            }}
+          >
+            <Ionicons
+              name={activeSession ? "checkmark-circle-outline" : "play-circle-outline"}
+              size={26}
+              color="#FFFFFF"
+            />
+            <View>
               <Text className="text-white text-lg font-bold">
                 {activeSession ? "End Trip" : "Check In"}
               </Text>
-              <Text className="text-white/70 text-xs mt-1">
+              <Text className="text-white/60 text-xs">
                 {activeSession ? "Tap to confirm safe" : "Start a trip session"}
               </Text>
-            </TouchableOpacity>
-          </View>
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* -- Active Session Card -- */}
         {activeSession && (
           <View
-            className="mx-5 mt-2 bg-dark-800 rounded-2xl overflow-hidden"
+            className="mx-5 mt-4 bg-dark-800 rounded-2xl overflow-hidden"
             style={{
               shadowColor: "#F59E0B",
               shadowOffset: { width: 0, height: 2 },
@@ -324,7 +241,7 @@ export default function HomeScreen() {
             <View className="p-4">
               <View className="flex-row items-center justify-between mb-2">
                 <View className="flex-row items-center gap-2">
-                  <PulseDot />
+                  <Ionicons name="radio-button-on" size={14} color="#F59E0B" />
                   <Text className="text-warning-500 text-sm font-semibold">
                     Active Session
                   </Text>
@@ -348,24 +265,9 @@ export default function HomeScreen() {
         {/* -- Quick Stats -- */}
         <View className="flex-row mx-5 mt-6 gap-3">
           {[
-            {
-              label: "Today's trips",
-              value: "2",
-              color: "text-primary-400",
-              accent: "bg-primary-500",
-            },
-            {
-              label: "Confirmations",
-              value: "2",
-              color: "text-safe-500",
-              accent: "bg-safe-500",
-            },
-            {
-              label: "Alerts",
-              value: "0",
-              color: "text-dark-300",
-              accent: "bg-dark-600",
-            },
+            { label: "Today's trips", value: "2", icon: "location-outline" as const, color: "#818CF8", accent: "bg-primary-500" },
+            { label: "Confirmations", value: "2", icon: "camera-outline" as const, color: "#22C55E", accent: "bg-safe-500" },
+            { label: "Alerts", value: "0", icon: "alert-circle-outline" as const, color: "#94A3B8", accent: "bg-dark-600" },
           ].map((stat) => (
             <View
               key={stat.label}
@@ -380,7 +282,8 @@ export default function HomeScreen() {
             >
               <View className={`h-1 ${stat.accent}`} />
               <View className="p-3 items-center">
-                <Text className={`text-2xl font-bold ${stat.color}`}>
+                <Ionicons name={stat.icon} size={20} color={stat.color} style={{ marginBottom: 6 }} />
+                <Text className="text-2xl font-bold text-white">
                   {stat.value}
                 </Text>
                 <Text className="text-dark-400 text-[10px] mt-1 text-center">
@@ -397,21 +300,22 @@ export default function HomeScreen() {
             Recent Activity
           </Text>
           {RECENT_ACTIVITY.map((item, idx) => (
-            <View key={item.id} className="flex-row gap-3 min-h-[56px]">
-              <ActivityDot type={item.type} />
+            <View key={item.id} className="flex-row gap-3 min-h-[52px]">
+              <View className="items-center mt-0.5">
+                <ActivityIcon type={item.type} />
+                {idx < RECENT_ACTIVITY.length - 1 && (
+                  <View className="w-0.5 flex-1 bg-dark-700/50 mt-1.5" />
+                )}
+              </View>
               <View
                 className={`flex-1 pb-4 ${
                   idx < RECENT_ACTIVITY.length - 1
-                    ? "border-b border-dark-700/50 mb-1"
+                    ? "border-b border-dark-700/30 mb-1"
                     : ""
                 }`}
               >
-                <Text className="text-dark-200 text-sm leading-5">
-                  {item.text}
-                </Text>
-                <Text className="text-dark-500 text-xs mt-1.5">
-                  {item.time}
-                </Text>
+                <Text className="text-dark-200 text-sm leading-5">{item.text}</Text>
+                <Text className="text-dark-500 text-xs mt-1.5">{item.time}</Text>
               </View>
             </View>
           ))}

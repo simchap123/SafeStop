@@ -7,5 +7,8 @@
     "mobile:web": "cd apps/mobile && npx expo start --web",
     "mobile:ios": "cd apps/mobile && npx expo start --ios",
     "mobile:android": "cd apps/mobile && npx expo start --android"
+  },
+  "dependencies": {
+    "pptxgenjs": "^4.0.1"
   }
 }

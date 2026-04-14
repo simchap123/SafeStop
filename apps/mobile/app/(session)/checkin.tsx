@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { MOCK_CHILDREN, type Child } from "../../lib/session-states";
 
 function ChildCard({
@@ -23,9 +24,10 @@ function ChildCard({
     <TouchableOpacity
       onPress={onToggle}
       className={`flex-row items-center p-4 rounded-2xl mb-3 ${
-        selected ? "bg-safe-500/15 border-2 border-safe-500" : "bg-dark-800 border-2 border-transparent"
+        selected ? "bg-safe-500/15 border-2 border-safe-500" : "bg-dark-800 border-2 border-dark-700"
       }`}
       activeOpacity={0.7}
+      style={{ minHeight: 48 }}
     >
       {/* Avatar */}
       <View
@@ -47,7 +49,7 @@ function ChildCard({
           selected ? "bg-safe-500" : "border-2 border-dark-500"
         }`}
       >
-        {selected && <Text className="text-white font-bold text-sm">{'✓'}</Text>}
+        {selected && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
       </View>
     </TouchableOpacity>
   );
@@ -81,11 +83,16 @@ export default function CheckInScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-dark-900">
-      <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Header */}
         <View className="mt-4 mb-2">
-          <TouchableOpacity onPress={() => router.back()} className="mb-4">
-            <Text className="text-dark-400 text-base">{"< Back"}</Text>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="mb-4 flex-row items-center gap-1"
+            style={{ minHeight: 48 }}
+          >
+            <Ionicons name="chevron-back" size={20} color="#94A3B8" />
+            <Text className="text-dark-400 text-base">Back</Text>
           </TouchableOpacity>
           <Text className="text-white text-3xl font-bold mb-1">Check In</Text>
           <Text className="text-dark-400 text-base">
@@ -95,9 +102,12 @@ export default function CheckInScreen() {
 
         {/* Who's riding */}
         <View className="mt-8">
-          <Text className="text-white text-lg font-semibold mb-4">
-            Who's riding with you?
-          </Text>
+          <View className="flex-row items-center gap-2 mb-4">
+            <Ionicons name="people-outline" size={20} color="#818CF8" />
+            <Text className="text-white text-lg font-semibold">
+              Who's riding with you?
+            </Text>
+          </View>
           {MOCK_CHILDREN.map((child) => (
             <ChildCard
               key={child.id}
@@ -110,12 +120,15 @@ export default function CheckInScreen() {
 
         {/* Location */}
         <View className="mt-8">
-          <Text className="text-white text-lg font-semibold mb-3">
-            Starting from
-          </Text>
-          <View className="bg-dark-800 rounded-2xl p-4 flex-row items-center">
+          <View className="flex-row items-center gap-2 mb-3">
+            <Ionicons name="location-outline" size={20} color="#818CF8" />
+            <Text className="text-white text-lg font-semibold">
+              Starting from
+            </Text>
+          </View>
+          <View className="bg-dark-800 border border-dark-700 rounded-2xl p-4 flex-row items-center">
             <View className="w-10 h-10 rounded-full bg-primary-500/20 items-center justify-center mr-3">
-              <Text className="text-primary-500 text-lg">{'O'}</Text>
+              <Ionicons name="navigate-outline" size={20} color="#818CF8" />
             </View>
             <TextInput
               className="flex-1 text-white text-base"
@@ -135,12 +148,17 @@ export default function CheckInScreen() {
         {/* Start Session Button */}
         <TouchableOpacity
           onPress={handleStart}
-          className={`mt-10 py-5 rounded-2xl items-center ${
+          className={`mt-10 h-14 rounded-xl items-center justify-center flex-row gap-2 ${
             selectedIds.length > 0 ? "bg-safe-500" : "bg-dark-700"
           }`}
           activeOpacity={0.8}
           disabled={selectedIds.length === 0}
         >
+          <Ionicons
+            name="play-circle-outline"
+            size={22}
+            color={selectedIds.length > 0 ? "#FFFFFF" : "#64748B"}
+          />
           <Text
             className={`text-lg font-bold ${
               selectedIds.length > 0 ? "text-white" : "text-dark-500"
@@ -155,6 +173,7 @@ export default function CheckInScreen() {
           onPress={() => router.back()}
           className="mt-6 items-center py-3"
           activeOpacity={0.6}
+          style={{ minHeight: 48 }}
         >
           <Text className="text-dark-400 text-base underline">
             No Child With Me Today

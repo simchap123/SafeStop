@@ -1,84 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Animated } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 const CONFIRMATION_TIMEOUT_SECONDS = 120; // 2 minutes
-
-function TimerRing({
-  countdown,
-  total,
-  isUrgent,
-}: {
-  countdown: number;
-  total: number;
-  isUrgent: boolean;
-}) {
-  const progress = countdown / total;
-  // Simulated circular progress via concentric rings
-  return (
-    <View className="items-center justify-center w-40 h-40">
-      {/* Outer ring background */}
-      <View
-        className={`absolute w-40 h-40 rounded-full border-4 ${
-          isUrgent ? "border-danger-500/20" : "border-warning-500/20"
-        }`}
-      />
-      {/* Progress ring (simulated with opacity) */}
-      <View
-        className={`absolute w-40 h-40 rounded-full border-4 ${
-          isUrgent ? "border-danger-500" : "border-warning-500"
-        }`}
-        style={{ opacity: progress }}
-      />
-      {/* Inner circle */}
-      <View
-        className={`w-32 h-32 rounded-full items-center justify-center ${
-          isUrgent ? "bg-danger-500/10" : "bg-warning-500/10"
-        }`}
-      >
-        <Text className="text-dark-300 text-xs mb-1">Time remaining</Text>
-        <Text
-          className={`text-4xl font-bold ${
-            isUrgent ? "text-danger-500" : "text-warning-500"
-          }`}
-        >
-          {Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, "0")}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-function PulseWarning() {
-  const opacity = useRef(new Animated.Value(0.6)).current;
-
-  useEffect(() => {
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0.6,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    anim.start();
-    return () => anim.stop();
-  }, [opacity]);
-
-  return (
-    <Animated.View
-      className="absolute inset-0 bg-warning-500/[0.06]"
-      style={{ opacity }}
-    />
-  );
-}
 
 export default function StopDetectedScreen() {
   const router = useRouter();
@@ -94,6 +20,7 @@ export default function StopDetectedScreen() {
   }, [countdown, router]);
 
   const isUrgent = countdown <= 30;
+  const countdownText = `${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, "0")}`;
 
   function handleTakePhoto() {
     router.push("/(session)/camera");
@@ -119,73 +46,65 @@ export default function StopDetectedScreen() {
         contentContainerStyle={{ paddingBottom: 40 }}
         bounces={false}
       >
-        {/* Warning Header with warm amber tint */}
-        <View className="relative overflow-hidden">
-          <PulseWarning />
-          <View className="bg-warning-500/10 border-b border-warning-500/30 px-6 py-5">
-            <View className="flex-row items-center mb-2">
-              <View
-                className="w-11 h-11 rounded-full bg-warning-500 items-center justify-center mr-3"
-                style={{
-                  shadowColor: "#F59E0B",
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.4,
-                  shadowRadius: 8,
-                  elevation: 6,
-                }}
-              >
-                <Text className="text-white font-bold text-xl">!</Text>
-              </View>
-              <View>
-                <Text className="text-warning-500 font-bold text-xl">
-                  Stop Detected
-                </Text>
-                <Text className="text-dark-300 text-sm mt-0.5">
-                  Please confirm your child's safety
-                </Text>
-              </View>
+        {/* Warning Header */}
+        <View className="bg-warning-500/15 border-b-2 border-warning-500 px-4 py-6">
+          <View className="flex-row items-center mb-2">
+            <View className="w-10 h-10 rounded-full bg-warning-500 items-center justify-center mr-3">
+              <Ionicons name="warning" size={24} color="#FFFFFF" />
             </View>
+            <Text className="text-warning-500 font-bold text-2xl">
+              Stop Detected
+            </Text>
+          </View>
+          <Text className="text-dark-200 text-base mt-1">
+            Your vehicle has stopped. Please confirm your child's safety.
+          </Text>
+        </View>
+
+        {/* Countdown Timer */}
+        <View className="items-center mt-8 px-4">
+          <View className="flex-row items-center gap-2 mb-2">
+            <Ionicons
+              name="time-outline"
+              size={18}
+              color={isUrgent ? "#EF4444" : "#F59E0B"}
+            />
+            <Text className="text-dark-300 text-base">
+              Confirmation needed in
+            </Text>
+          </View>
+          <View
+            className={`px-6 py-3 rounded-2xl ${
+              isUrgent ? "bg-danger-500/15" : "bg-warning-500/10"
+            }`}
+          >
+            <Text
+              className={`text-4xl font-bold font-mono ${
+                isUrgent ? "text-danger-500" : "text-warning-500"
+              }`}
+            >
+              {countdownText}
+            </Text>
           </View>
         </View>
 
-        {/* Countdown Timer Ring */}
-        <View className="items-center mt-8 mb-6">
-          <TimerRing
-            countdown={countdown}
-            total={CONFIRMATION_TIMEOUT_SECONDS}
-            isUrgent={isUrgent}
-          />
-        </View>
-
         {/* Question */}
-        <View className="px-6">
+        <View className="px-4 mt-8">
           <Text className="text-white text-2xl font-bold text-center mb-8">
             Did you take your child out?
           </Text>
 
-          {/* Action Buttons with clear visual hierarchy */}
+          {/* Action Buttons */}
           <View className="gap-4">
-            {/* PRIMARY: Take Photo - HUGE and unmissable */}
+            {/* PRIMARY: Take Photo */}
             <TouchableOpacity
               onPress={handleTakePhoto}
+              className="bg-safe-500 h-16 rounded-xl flex-row items-center justify-center gap-3"
               activeOpacity={0.8}
-              className="bg-safe-500 rounded-2xl flex-row items-center justify-center"
-              style={{
-                height: 72,
-                shadowColor: "#22C55E",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.4,
-                shadowRadius: 12,
-                elevation: 10,
-              }}
             >
-              <View className="w-10 h-10 rounded-full bg-white/20 items-center justify-center mr-3">
-                <Text className="text-white text-lg">{"[ ]"}</Text>
-              </View>
+              <Ionicons name="camera-outline" size={24} color="#FFFFFF" />
               <View>
-                <Text className="text-white font-bold text-lg">
-                  Take Photo
-                </Text>
+                <Text className="text-white font-bold text-lg">Take Photo</Text>
                 <Text className="text-white/70 text-sm">
                   Recommended for full verification
                 </Text>
@@ -195,14 +114,10 @@ export default function StopDetectedScreen() {
             {/* SECONDARY: Confirm Without Photo */}
             <TouchableOpacity
               onPress={handleConfirmWithoutPhoto}
+              className="border-2 border-dark-600 h-14 rounded-xl flex-row items-center justify-center gap-2"
               activeOpacity={0.7}
-              className="border-2 border-safe-500/40 bg-safe-500/5 py-4 rounded-2xl flex-row items-center justify-center"
             >
-              <View className="w-8 h-8 rounded-full bg-safe-500/20 items-center justify-center mr-3">
-                <Text className="text-safe-500 font-bold text-sm">
-                  {"\u2713"}
-                </Text>
-              </View>
+              <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
               <Text className="text-white font-semibold text-base">
                 Confirm Without Photo
               </Text>
@@ -211,28 +126,29 @@ export default function StopDetectedScreen() {
             {/* TERTIARY: Remind Me */}
             <TouchableOpacity
               onPress={handleRemindLater}
+              className="h-14 items-center justify-center"
               activeOpacity={0.6}
-              className="bg-dark-800 py-4 rounded-2xl items-center"
             >
-              <View className="flex-row items-center">
-                <View className="w-7 h-7 rounded-full bg-dark-700 items-center justify-center mr-2">
-                  <Text className="text-dark-300 text-xs">{"~"}</Text>
-                </View>
+              <View className="flex-row items-center gap-2">
+                <Ionicons name="time-outline" size={18} color="#CBD5E1" />
                 <Text className="text-dark-300 font-medium text-base">
                   Remind Me in 2 Minutes
                 </Text>
               </View>
             </TouchableOpacity>
 
-            {/* GHOST: No Child */}
+            {/* BOTTOM: No Child */}
             <TouchableOpacity
               onPress={handleNoChild}
+              className="h-12 items-center justify-center mt-2"
               activeOpacity={0.5}
-              className="py-3 items-center mt-1"
             >
-              <Text className="text-dark-500 text-sm underline">
-                No child with me
-              </Text>
+              <View className="flex-row items-center gap-2">
+                <Ionicons name="close-circle-outline" size={16} color="#64748B" />
+                <Text className="text-dark-500 text-sm">
+                  No Child With Me
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>

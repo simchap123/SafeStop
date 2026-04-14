@@ -2,41 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import { View, Text, TouchableOpacity, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-
-function PulsingBorder() {
-  const opacity = useRef(new Animated.Value(0.3)).current;
-
-  useEffect(() => {
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, {
-          toValue: 0.8,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0.3,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    anim.start();
-    return () => anim.stop();
-  }, [opacity]);
-
-  return (
-    <Animated.View
-      className="absolute inset-0 border-2 border-danger-500 rounded-3xl"
-      style={{ opacity }}
-    />
-  );
-}
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 export default function MissedConfirmationScreen() {
   const router = useRouter();
-  const pulseAnim = useRef(new Animated.Value(0.7)).current;
-  const bgPulse = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(0.6)).current;
   const [elapsedSinceAlert, setElapsedSinceAlert] = useState(0);
 
   // Pulsing urgency animation
@@ -49,7 +19,7 @@ export default function MissedConfirmationScreen() {
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
-          toValue: 0.7,
+          toValue: 0.6,
           duration: 600,
           useNativeDriver: true,
         }),
@@ -58,26 +28,6 @@ export default function MissedConfirmationScreen() {
     pulse.start();
     return () => pulse.stop();
   }, [pulseAnim]);
-
-  // Background pulse
-  useEffect(() => {
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(bgPulse, {
-          toValue: 1,
-          duration: 1200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(bgPulse, {
-          toValue: 0,
-          duration: 1200,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    anim.start();
-    return () => anim.stop();
-  }, [bgPulse]);
 
   // Time since alert
   useEffect(() => {
@@ -101,70 +51,40 @@ export default function MissedConfirmationScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-dark-900">
-      {/* Subtle pulsing red background tint */}
-      <Animated.View
-        className="absolute inset-0 bg-danger-500/[0.04]"
-        style={{ opacity: bgPulse }}
-      />
-
       {/* Red urgent header */}
       <Animated.View
-        className="bg-danger-500 px-6 py-8"
+        className="bg-danger-500 px-4 py-8"
         style={{ opacity: pulseAnim }}
       >
         <View className="items-center">
-          <View
-            className="w-16 h-16 rounded-full bg-white/20 items-center justify-center mb-4"
-            style={{
-              shadowColor: "#fff",
-              shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 0.3,
-              shadowRadius: 12,
-              elevation: 8,
-            }}
-          >
-            <Text className="text-white text-4xl font-bold">!</Text>
+          <View className="w-16 h-16 rounded-full bg-white/20 items-center justify-center mb-4">
+            <Ionicons name="warning-outline" size={36} color="#FFFFFF" />
           </View>
           <Text className="text-white font-bold text-2xl text-center">
             Confirmation Not Received
           </Text>
-          <Text className="text-white/70 text-sm text-center mt-1">
-            Immediate action required
-          </Text>
         </View>
       </Animated.View>
 
-      <View className="flex-1 px-6 items-center">
-        {/* Alert info card with pulsing border */}
-        <View className="relative mt-8 w-full">
-          <PulsingBorder />
-          <View className="bg-danger-500/10 rounded-3xl p-6">
-            <View className="flex-row items-center mb-3">
-              <View className="w-3 h-3 rounded-full bg-danger-500 mr-2" />
-              <Text className="text-danger-500 font-semibold text-base">
-                Alert Escalated
-              </Text>
-            </View>
-            <Text className="text-dark-200 text-base leading-6">
-              You did not confirm your child's safety within the required time.
-              Caregivers and emergency contacts have been alerted.
+      <View className="flex-1 px-4 items-center">
+        {/* Alert info */}
+        <View className="bg-danger-500/10 border border-danger-500/30 rounded-2xl p-6 mt-8 w-full">
+          <View className="flex-row items-center mb-3 gap-2">
+            <Ionicons name="alert-circle" size={18} color="#EF4444" />
+            <Text className="text-danger-500 font-semibold text-base">
+              Alert Escalated
             </Text>
           </View>
+          <Text className="text-dark-200 text-base leading-6">
+            You did not confirm your child's safety within the required time.
+            Caregivers and emergency contacts have been alerted.
+          </Text>
         </View>
 
         {/* Caregiver notification */}
-        <View
-          className="bg-dark-800 rounded-2xl p-5 mt-4 w-full flex-row items-center border border-dark-700/50"
-          style={{
-            shadowColor: "#EF4444",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 6,
-            elevation: 3,
-          }}
-        >
+        <View className="bg-dark-800 border border-dark-700 rounded-2xl p-4 mt-4 w-full flex-row items-center">
           <View className="w-10 h-10 rounded-full bg-danger-500/20 items-center justify-center mr-4">
-            <Text className="text-danger-500 font-bold text-lg">{"!"}</Text>
+            <Ionicons name="notifications" size={20} color="#EF4444" />
           </View>
           <View className="flex-1">
             <Text className="text-white font-semibold text-base">
@@ -177,16 +97,7 @@ export default function MissedConfirmationScreen() {
         </View>
 
         {/* Child info */}
-        <View
-          className="bg-dark-800 rounded-2xl p-5 mt-4 w-full flex-row items-center border border-dark-700/50"
-          style={{
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 2,
-          }}
-        >
+        <View className="bg-dark-800 border border-dark-700 rounded-2xl p-4 mt-4 w-full flex-row items-center">
           <View className="w-12 h-12 rounded-full bg-primary-500 items-center justify-center mr-4">
             <Text className="text-white font-bold text-base">EM</Text>
           </View>
@@ -200,31 +111,22 @@ export default function MissedConfirmationScreen() {
       </View>
 
       {/* Bottom actions */}
-      <View className="px-6 pb-6 gap-4">
+      <View className="px-4 pb-6 gap-4">
         <TouchableOpacity
           onPress={handleConfirmNow}
+          className="bg-danger-500 h-14 rounded-xl items-center justify-center flex-row gap-2"
           activeOpacity={0.8}
-          className="bg-danger-500 py-5 rounded-2xl items-center"
-          style={{
-            shadowColor: "#EF4444",
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.4,
-            shadowRadius: 12,
-            elevation: 10,
-          }}
         >
+          <Ionicons name="checkmark-circle-outline" size={22} color="#FFFFFF" />
           <Text className="text-white font-bold text-lg">Confirm Now</Text>
-          <Text className="text-white/60 text-xs mt-0.5">
-            Verify your child is safe
-          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={handleFalseAlarm}
+          className="h-12 items-center justify-center"
           activeOpacity={0.6}
-          className="py-3 items-center"
         >
-          <Text className="text-dark-400 text-base underline">
+          <Text className="text-dark-400 text-base">
             This was a false alarm
           </Text>
         </TouchableOpacity>

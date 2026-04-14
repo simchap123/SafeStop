@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Text, Pressable, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 type Plan = "free" | "paid";
 
@@ -128,18 +129,14 @@ export default function SubscriptionScreen() {
               <Text className="text-white text-sm flex-1">{feature.label}</Text>
               <View className="w-14 items-center">
                 {feature.free ? (
-                  <Text className="text-safe-500 text-base font-bold">
-                    {"\u2713"}
-                  </Text>
+                  <Ionicons name="checkmark" size={18} color="#22C55E" />
                 ) : (
                   <Text className="text-dark-600 text-base">--</Text>
                 )}
               </View>
               <View className="w-14 items-center">
                 {feature.paid ? (
-                  <Text className="text-safe-500 text-base font-bold">
-                    {"\u2713"}
-                  </Text>
+                  <Ionicons name="checkmark" size={18} color="#22C55E" />
                 ) : (
                   <Text className="text-dark-600 text-base">--</Text>
                 )}

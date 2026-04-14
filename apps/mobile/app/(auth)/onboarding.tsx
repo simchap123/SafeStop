@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import ProgressBar from "../../components/ui/ProgressBar";
@@ -29,7 +30,7 @@ function StepFamily({
     <View>
       <View className="items-center mb-6">
         <View className="w-16 h-16 rounded-2xl bg-primary-500/20 items-center justify-center mb-4">
-          <Text className="text-3xl">👨‍👩‍👧‍👦</Text>
+          <Ionicons name="people" size={28} color="#818CF8" />
         </View>
         <Text className="text-white text-2xl font-bold mb-2">Create Your Family</Text>
         <Text className="text-dark-300 text-sm text-center px-4">
@@ -59,7 +60,7 @@ function StepChild({
     <View>
       <View className="items-center mb-6">
         <View className="w-16 h-16 rounded-2xl bg-safe-500/20 items-center justify-center mb-4">
-          <Text className="text-3xl text-safe-500 font-bold">+</Text>
+          <Ionicons name="person-add" size={28} color="#22C55E" />
         </View>
         <Text className="text-white text-2xl font-bold mb-2">Add Your Child</Text>
         <Text className="text-dark-300 text-sm text-center px-4">
@@ -76,8 +77,8 @@ function StepChild({
       {/* Photo placeholder */}
       <View className="items-center mt-2">
         <Pressable className="w-24 h-24 rounded-full bg-dark-800 border-2 border-dashed border-dark-600 items-center justify-center">
-          <Text className="text-dark-400 text-3xl mb-1">📷</Text>
-          <Text className="text-dark-400 text-xs">Photo</Text>
+          <Ionicons name="camera-outline" size={28} color="#94A3B8" />
+          <Text className="text-dark-400 text-xs mt-1">Photo</Text>
         </Pressable>
         <Text className="text-dark-400 text-xs mt-2">Optional</Text>
       </View>
@@ -104,7 +105,7 @@ function StepDestination({
     <View>
       <View className="items-center mb-6">
         <View className="w-16 h-16 rounded-2xl bg-primary-500/20 items-center justify-center mb-4">
-          <Text className="text-2xl text-primary-400 font-bold">📍</Text>
+          <Ionicons name="location" size={28} color="#818CF8" />
         </View>
         <Text className="text-white text-2xl font-bold mb-2">Add a Destination</Text>
         <Text className="text-dark-300 text-sm text-center px-4">
@@ -119,7 +120,7 @@ function StepDestination({
           <Pressable
             key={type}
             onPress={() => setDestinationLabel(type)}
-            className={`px-4 py-2 rounded-full border ${
+            className={`px-4 py-2 rounded-xl border ${
               destinationLabel === type
                 ? "bg-primary-500 border-primary-500"
                 : "bg-dark-800 border-dark-700"
@@ -165,7 +166,7 @@ function StepCaregiver({
     <View>
       <View className="items-center mb-6">
         <View className="w-16 h-16 rounded-2xl bg-safe-500/20 items-center justify-center mb-4">
-          <Text className="text-2xl text-safe-500 font-bold">✉</Text>
+          <Ionicons name="mail-outline" size={28} color="#22C55E" />
         </View>
         <Text className="text-white text-2xl font-bold mb-2">Invite a Caregiver</Text>
         <Text className="text-dark-300 text-sm text-center px-4">
@@ -243,24 +244,30 @@ function StepPermissions({
     setPermissions({ ...permissions, [key]: !permissions[key] });
   };
 
-  const permissionItems = [
+  const permissionItems: {
+    key: keyof PermissionState;
+    icon: keyof typeof Ionicons.glyphMap;
+    title: string;
+    description: string;
+    required: boolean;
+  }[] = [
     {
-      key: "location" as const,
-      icon: "📍",
+      key: "location",
+      icon: "location-outline",
       title: "Location Access",
       description: "Detect trips, arrivals, and departures automatically",
       required: true,
     },
     {
-      key: "notifications" as const,
-      icon: "🔔",
+      key: "notifications",
+      icon: "notifications-outline",
       title: "Push Notifications",
       description: "Receive critical safety alerts and reminders",
       required: true,
     },
     {
-      key: "camera" as const,
-      icon: "📷",
+      key: "camera",
+      icon: "camera-outline",
       title: "Camera Access",
       description: "Capture backseat confirmation photos",
       required: false,
@@ -271,7 +278,7 @@ function StepPermissions({
     <View>
       <View className="items-center mb-6">
         <View className="w-16 h-16 rounded-2xl bg-danger-500/20 items-center justify-center mb-4">
-          <Text className="text-2xl text-danger-500 font-bold">🔒</Text>
+          <Ionicons name="lock-closed-outline" size={28} color="#EF4444" />
         </View>
         <Text className="text-white text-2xl font-bold mb-2">Enable Permissions</Text>
         <Text className="text-dark-300 text-sm text-center px-4">
@@ -290,7 +297,7 @@ function StepPermissions({
                 : "bg-dark-800 border-dark-700"
             }`}
           >
-            <Text className="text-2xl mr-3">{item.icon}</Text>
+            <Ionicons name={item.icon} size={24} color="#94A3B8" style={{ marginRight: 12 }} />
             <View className="flex-1">
               <View className="flex-row items-center gap-2">
                 <Text className="text-white font-medium">{item.title}</Text>
@@ -308,7 +315,7 @@ function StepPermissions({
               }`}
             >
               {permissions[item.key] && (
-                <Text className="text-white text-xs font-bold">✓</Text>
+                <Ionicons name="checkmark" size={14} color="#FFFFFF" />
               )}
             </View>
           </Pressable>

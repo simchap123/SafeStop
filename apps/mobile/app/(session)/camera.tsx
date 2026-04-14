@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 type CameraState = "viewfinder" | "preview" | "uploading" | "confirmed";
 
@@ -35,10 +36,10 @@ export default function CameraScreen() {
   if (state === "confirmed") {
     return (
       <SafeAreaView className="flex-1 bg-dark-900">
-        <View className="flex-1 items-center justify-center px-6">
+        <View className="flex-1 items-center justify-center px-4">
           {/* Green checkmark */}
           <View className="w-24 h-24 rounded-full bg-safe-500 items-center justify-center mb-6">
-            <Text className="text-white text-5xl font-bold">{'✓'}</Text>
+            <Ionicons name="checkmark-circle" size={56} color="#FFFFFF" />
           </View>
           <Text className="text-white text-2xl font-bold mb-2">
             Photo Confirmed
@@ -48,7 +49,7 @@ export default function CameraScreen() {
           </Text>
           <TouchableOpacity
             onPress={handleDone}
-            className="bg-safe-500 py-4 px-12 rounded-2xl mt-10"
+            className="bg-safe-500 h-14 px-12 rounded-xl mt-10 items-center justify-center"
             activeOpacity={0.8}
           >
             <Text className="text-white font-bold text-lg">Continue</Text>
@@ -62,7 +63,7 @@ export default function CameraScreen() {
   if (state === "uploading") {
     return (
       <SafeAreaView className="flex-1 bg-dark-900">
-        <View className="flex-1 items-center justify-center px-6">
+        <View className="flex-1 items-center justify-center px-4">
           <ActivityIndicator size="large" color="#22C55E" />
           <Text className="text-white text-xl font-semibold mt-6">
             Uploading Photo...
@@ -86,7 +87,7 @@ export default function CameraScreen() {
         {/* Photo preview placeholder */}
         <View className="flex-1 bg-dark-800 items-center justify-center">
           <View className="w-32 h-32 rounded-2xl bg-dark-700 items-center justify-center mb-4">
-            <Text className="text-dark-400 text-5xl">{'[ ]'}</Text>
+            <Ionicons name="image-outline" size={48} color="#475569" />
           </View>
           <Text className="text-dark-400 text-base">Photo Preview</Text>
           <Text className="text-dark-500 text-sm mt-1">
@@ -95,19 +96,21 @@ export default function CameraScreen() {
         </View>
 
         {/* Bottom actions */}
-        <View className="bg-dark-900 px-6 py-6 flex-row items-center justify-center gap-4">
+        <View className="bg-dark-900 px-4 py-6 flex-row items-center justify-center gap-4">
           <TouchableOpacity
             onPress={handleRetake}
-            className="flex-1 py-4 rounded-2xl border-2 border-dark-600 items-center"
+            className="flex-1 h-14 rounded-xl border-2 border-dark-600 items-center justify-center flex-row gap-2"
             activeOpacity={0.7}
           >
+            <Ionicons name="refresh-outline" size={18} color="#FFFFFF" />
             <Text className="text-white font-semibold text-base">Retake</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handleUsePhoto}
-            className="flex-1 py-4 rounded-2xl bg-safe-500 items-center"
+            className="flex-1 h-14 rounded-xl bg-safe-500 items-center justify-center flex-row gap-2"
             activeOpacity={0.8}
           >
+            <Ionicons name="checkmark" size={18} color="#FFFFFF" />
             <Text className="text-white font-bold text-base">Use Photo</Text>
           </TouchableOpacity>
         </View>
@@ -119,10 +122,14 @@ export default function CameraScreen() {
   return (
     <SafeAreaView className="flex-1 bg-black" edges={["top"]}>
       {/* Top controls */}
-      <View className="flex-row justify-between items-center px-6 py-4 bg-black/60 absolute top-12 left-0 right-0 z-10">
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.6}>
+      <View className="flex-row justify-between items-center px-4 py-4 bg-black/60 absolute top-12 left-0 right-0 z-10">
+        <TouchableOpacity
+          onPress={() => router.back()}
+          activeOpacity={0.6}
+          style={{ minHeight: 48, minWidth: 48 }}
+        >
           <View className="w-10 h-10 rounded-full bg-dark-800/80 items-center justify-center">
-            <Text className="text-white text-lg">{'X'}</Text>
+            <Ionicons name="close" size={22} color="#FFFFFF" />
           </View>
         </TouchableOpacity>
 
@@ -131,15 +138,14 @@ export default function CameraScreen() {
           <TouchableOpacity
             onPress={() => setFlashOn(!flashOn)}
             activeOpacity={0.6}
+            style={{ minHeight: 48, minWidth: 48 }}
           >
             <View
               className={`w-10 h-10 rounded-full items-center justify-center ${
                 flashOn ? "bg-warning-500" : "bg-dark-800/80"
               }`}
             >
-              <Text className="text-white text-sm font-bold">
-                {flashOn ? "F" : "F"}
-              </Text>
+              <Ionicons name={flashOn ? "flash" : "flash-off"} size={20} color="#FFFFFF" />
             </View>
           </TouchableOpacity>
 
@@ -147,9 +153,10 @@ export default function CameraScreen() {
           <TouchableOpacity
             onPress={() => setFrontCamera(!frontCamera)}
             activeOpacity={0.6}
+            style={{ minHeight: 48, minWidth: 48 }}
           >
             <View className="w-10 h-10 rounded-full bg-dark-800/80 items-center justify-center">
-              <Text className="text-white text-sm font-bold">{'R'}</Text>
+              <Ionicons name="camera-reverse-outline" size={22} color="#FFFFFF" />
             </View>
           </TouchableOpacity>
         </View>
@@ -158,7 +165,7 @@ export default function CameraScreen() {
       {/* Camera view placeholder */}
       <View className="flex-1 bg-dark-950 items-center justify-center">
         <View className="w-20 h-20 rounded-full border-2 border-dark-600 items-center justify-center mb-4">
-          <Text className="text-dark-500 text-3xl">{'O'}</Text>
+          <Ionicons name="camera-outline" size={32} color="#64748B" />
         </View>
         <Text className="text-dark-500 text-base">Camera View</Text>
         <Text className="text-dark-600 text-sm mt-1">
@@ -168,7 +175,7 @@ export default function CameraScreen() {
       </View>
 
       {/* Capture button */}
-      <View className="bg-black px-6 py-8 items-center">
+      <View className="bg-black px-4 py-8 items-center">
         <Text className="text-dark-400 text-sm mb-4">
           Take a photo of the empty car seat
         </Text>

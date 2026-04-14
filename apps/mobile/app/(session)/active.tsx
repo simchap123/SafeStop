@@ -1,56 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, Animated } from "react-native";
-import MapView from "../../components/ui/MapView";
+import React, { useState, useEffect } from "react";
+import { View, Text, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-
-function PulseDot() {
-  const scale = useRef(new Animated.Value(1)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const pulse = Animated.loop(
-      Animated.parallel([
-        Animated.sequence([
-          Animated.timing(scale, {
-            toValue: 1.8,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scale, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.sequence([
-          Animated.timing(opacity, {
-            toValue: 0.3,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacity, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ]),
-      ])
-    );
-    pulse.start();
-    return () => pulse.stop();
-  }, [scale, opacity]);
-
-  return (
-    <View className="items-center justify-center mr-3">
-      <Animated.View
-        className="w-3 h-3 rounded-full bg-safe-500 absolute"
-        style={{ transform: [{ scale }], opacity }}
-      />
-      <View className="w-3 h-3 rounded-full bg-safe-500" />
-    </View>
-  );
-}
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -90,12 +42,12 @@ export default function ActiveSessionScreen() {
   return (
     <SafeAreaView className="flex-1 bg-dark-900">
       {/* Active Banner */}
-      <View className="bg-safe-500/10 border-b border-safe-500/20 px-6 py-4 flex-row items-center justify-center">
-        <PulseDot />
+      <View className="bg-safe-500/10 border-b border-safe-500/20 px-4 py-4 flex-row items-center justify-center gap-2">
+        <Ionicons name="radio-button-on" size={14} color="#22C55E" />
         <Text className="text-safe-500 font-bold text-lg">Session Active</Text>
       </View>
 
-      <View className="flex-1 px-6">
+      <View className="flex-1 px-4">
         {/* Child & Timer */}
         <View className="items-center mt-8">
           <View className="w-16 h-16 rounded-full bg-primary-500 items-center justify-center mb-4">
@@ -108,25 +60,26 @@ export default function ActiveSessionScreen() {
           </Text>
         </View>
 
-        {/* Map */}
-        <View className="mt-8 rounded-2xl overflow-hidden">
-          <MapView
-            latitude={37.4220}
-            longitude={-122.0841}
-            height={200}
-            showPin
-            markers={[{ lat: 37.4220, lng: -122.0841, title: "Current Location" }]}
-          />
+        {/* Map Placeholder */}
+        <View className="mt-8 bg-dark-800 border border-dark-700 rounded-2xl h-48 items-center justify-center">
+          <Ionicons name="map-outline" size={32} color="#475569" style={{ marginBottom: 8 }} />
+          <Text className="text-dark-400 text-base font-medium">Map View</Text>
+          <Text className="text-dark-500 text-sm mt-1">
+            Live tracking coming soon
+          </Text>
         </View>
 
         {/* Status */}
-        <View className="mt-6 bg-dark-800 rounded-2xl p-4 flex-row items-center justify-between">
-          <Text className="text-dark-300 text-base">Current Status</Text>
-          <View className="flex-row items-center">
-            <View
-              className={`w-3 h-3 rounded-full mr-2 ${
-                status === "Driving" ? "bg-safe-500" : "bg-warning-500"
-              }`}
+        <View className="mt-6 bg-dark-800 border border-dark-700 rounded-2xl p-4 flex-row items-center justify-between">
+          <View className="flex-row items-center gap-2">
+            <Ionicons name="car-outline" size={20} color="#94A3B8" />
+            <Text className="text-dark-300 text-base">Current Status</Text>
+          </View>
+          <View className="flex-row items-center gap-2">
+            <Ionicons
+              name={status === "Driving" ? "navigate" : "location"}
+              size={16}
+              color={status === "Driving" ? "#22C55E" : "#F59E0B"}
             />
             <Text className="text-white font-semibold text-base">{status}</Text>
           </View>
@@ -135,9 +88,10 @@ export default function ActiveSessionScreen() {
         {/* Simulate stop button (for demo) */}
         <TouchableOpacity
           onPress={handleSimulateStop}
-          className="mt-4 bg-warning-500/15 border border-warning-500/30 py-3 rounded-2xl items-center"
+          className="mt-4 bg-warning-500/15 border border-warning-500/30 h-14 rounded-xl items-center justify-center flex-row gap-2"
           activeOpacity={0.7}
         >
+          <Ionicons name="pause-circle-outline" size={20} color="#F59E0B" />
           <Text className="text-warning-500 font-medium text-sm">
             Simulate Stop Detection (Demo)
           </Text>
@@ -145,12 +99,13 @@ export default function ActiveSessionScreen() {
       </View>
 
       {/* End Session */}
-      <View className="px-6 pb-6">
+      <View className="px-4 pb-6">
         <TouchableOpacity
           onPress={handleEndSession}
-          className="py-4 rounded-2xl items-center border-2 border-dark-600"
+          className="h-14 rounded-xl items-center justify-center border-2 border-dark-600 flex-row gap-2"
           activeOpacity={0.7}
         >
+          <Ionicons name="stop-circle-outline" size={20} color="#CBD5E1" />
           <Text className="text-dark-300 font-semibold text-base">
             End Session
           </Text>

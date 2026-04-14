@@ -1,0 +1,166 @@
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { MOCK_CHILDREN, type Child } from "../../lib/session-states";
+
+function ChildCard({
+  child,
+  selected,
+  onToggle,
+}: {
+  child: Child;
+  selected: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onToggle}
+      className={`flex-row items-center p-4 rounded-2xl mb-3 ${
+        selected ? "bg-safe-500/15 border-2 border-safe-500" : "bg-dark-800 border-2 border-transparent"
+      }`}
+      activeOpacity={0.7}
+    >
+      {/* Avatar */}
+      <View
+        className="w-12 h-12 rounded-full items-center justify-center mr-4"
+        style={{ backgroundColor: child.color }}
+      >
+        <Text className="text-white font-bold text-base">{child.initials}</Text>
+      </View>
+
+      {/* Info */}
+      <View className="flex-1">
+        <Text className="text-white font-semibold text-lg">{child.name}</Text>
+        <Text className="text-dark-400 text-sm">{child.age} years old</Text>
+      </View>
+
+      {/* Checkbox */}
+      <View
+        className={`w-7 h-7 rounded-lg items-center justify-center ${
+          selected ? "bg-safe-500" : "border-2 border-dark-500"
+        }`}
+      >
+        {selected && <Text className="text-white font-bold text-sm">{'✓'}</Text>}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+export default function CheckInScreen() {
+  const router = useRouter();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [location, setLocation] = useState("Detecting location...");
+  const [locationDetected, setLocationDetected] = useState(false);
+
+  // Simulate location detection
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setLocation("123 Main Street");
+      setLocationDetected(true);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  function toggleChild(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  function handleStart() {
+    if (selectedIds.length === 0) return;
+    router.push("/(session)/active");
+  }
+
+  return (
+    <SafeAreaView className="flex-1 bg-dark-900">
+      <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* Header */}
+        <View className="mt-4 mb-2">
+          <TouchableOpacity onPress={() => router.back()} className="mb-4">
+            <Text className="text-dark-400 text-base">{"< Back"}</Text>
+          </TouchableOpacity>
+          <Text className="text-white text-3xl font-bold mb-1">Check In</Text>
+          <Text className="text-dark-400 text-base">
+            Start a safety session before you drive.
+          </Text>
+        </View>
+
+        {/* Who's riding */}
+        <View className="mt-8">
+          <Text className="text-white text-lg font-semibold mb-4">
+            Who's riding with you?
+          </Text>
+          {MOCK_CHILDREN.map((child) => (
+            <ChildCard
+              key={child.id}
+              child={child}
+              selected={selectedIds.includes(child.id)}
+              onToggle={() => toggleChild(child.id)}
+            />
+          ))}
+        </View>
+
+        {/* Location */}
+        <View className="mt-8">
+          <Text className="text-white text-lg font-semibold mb-3">
+            Starting from
+          </Text>
+          <View className="bg-dark-800 rounded-2xl p-4 flex-row items-center">
+            <View className="w-10 h-10 rounded-full bg-primary-500/20 items-center justify-center mr-3">
+              <Text className="text-primary-500 text-lg">{'O'}</Text>
+            </View>
+            <TextInput
+              className="flex-1 text-white text-base"
+              value={location}
+              onChangeText={setLocation}
+              placeholderTextColor="#64748B"
+              placeholder="Enter location..."
+            />
+            {locationDetected && (
+              <View className="bg-safe-500/20 px-2 py-1 rounded-lg">
+                <Text className="text-safe-500 text-xs font-medium">Auto</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Start Session Button */}
+        <TouchableOpacity
+          onPress={handleStart}
+          className={`mt-10 py-5 rounded-2xl items-center ${
+            selectedIds.length > 0 ? "bg-safe-500" : "bg-dark-700"
+          }`}
+          activeOpacity={0.8}
+          disabled={selectedIds.length === 0}
+        >
+          <Text
+            className={`text-lg font-bold ${
+              selectedIds.length > 0 ? "text-white" : "text-dark-500"
+            }`}
+          >
+            Start Session
+          </Text>
+        </TouchableOpacity>
+
+        {/* No child link */}
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="mt-6 items-center py-3"
+          activeOpacity={0.6}
+        >
+          <Text className="text-dark-400 text-base underline">
+            No Child With Me Today
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}

@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "SafeStop",
+    "slug": "safestop",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "scheme": "safestop",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F172A"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.safestop.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "SafeStop needs camera access to capture backseat confirmation photos.",
+        "NSLocationWhenInUseUsageDescription": "SafeStop uses your location to detect trips and arrivals.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "SafeStop monitors your location in the background to detect stops during active child sessions."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0F172A"
+      },
+      "package": "com.safestop.app",
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-camera",
+      "expo-location",
+      "expo-notifications",
+      "expo-image-picker"
+    ]
+  }
+}

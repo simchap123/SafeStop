@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import MapView from "../../components/ui/MapView";
 import { useApp } from "../../lib/store";
+import { updateDestination, deleteDestination } from "../../lib/api";
 
 type DestType = "Daycare" | "School" | "Babysitter" | "Family" | "Custom";
 
@@ -65,19 +66,29 @@ export default function DestinationDetailScreen() {
     setActiveDays(updated);
   };
 
-  const handleSave = () => {
-    if (!destination) return;
-    dispatch({
-      type: "UPDATE_DESTINATION",
-      payload: {
-        ...destination,
-        name: label,
-        address,
-        radius,
-        isDefault: active,
-      },
-    });
-    showAlert("Saved", "Destination updated successfully.");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!destination || !id) return;
+    setSaving(true);
+    try {
+      const updated = await updateDestination(id, { name: label, address, radius, isDefault: active });
+      dispatch({
+        type: "UPDATE_DESTINATION",
+        payload: {
+          ...destination,
+          name: updated.name ?? label,
+          address: updated.address ?? address,
+          radius: updated.radius ?? radius,
+          isDefault: updated.isDefault ?? active,
+        },
+      });
+      showAlert("Saved", "Destination updated successfully.");
+    } catch (err: any) {
+      showAlert("Error", err.message || "Failed to update destination.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = () => {
@@ -89,9 +100,15 @@ export default function DestinationDetailScreen() {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            if (id) dispatch({ type: "REMOVE_DESTINATION", payload: id });
-            router.back();
+          onPress: async () => {
+            if (!id) return;
+            try {
+              await deleteDestination(id);
+              dispatch({ type: "REMOVE_DESTINATION", payload: id });
+              router.back();
+            } catch (err: any) {
+              showAlert("Error", err.message || "Failed to delete destination.");
+            }
           },
         },
       ]

@@ -3,11 +3,16 @@ import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useApp } from "../../lib/store";
+import { updateSession } from "../../lib/api";
+import { showAlert } from "../../lib/alert";
+import { SessionState } from "../../lib/types";
 
 type CameraState = "viewfinder" | "preview" | "uploading" | "confirmed";
 
 export default function CameraScreen() {
   const router = useRouter();
+  const { state: appState, dispatch } = useApp();
   const [state, setState] = useState<CameraState>("viewfinder");
   const [flashOn, setFlashOn] = useState(false);
   const [frontCamera, setFrontCamera] = useState(false);
@@ -20,12 +25,23 @@ export default function CameraScreen() {
     setState("viewfinder");
   }
 
-  function handleUsePhoto() {
+  async function handleUsePhoto() {
     setState("uploading");
-    // Simulate upload
-    setTimeout(() => {
+    try {
+      // Update session state to confirmed via API
+      if (appState.session?.id) {
+        await updateSession(appState.session.id, { status: 'confirmed' });
+      }
+      // Update local session state
+      dispatch({
+        type: 'UPDATE_SESSION',
+        payload: { state: SessionState.CONFIRMED_SAFE },
+      });
       setState("confirmed");
-    }, 2000);
+    } catch (err: any) {
+      showAlert("Error", err.message || "Failed to upload photo");
+      setState("preview");
+    }
   }
 
   function handleDone() {

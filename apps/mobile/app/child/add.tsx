@@ -10,6 +10,7 @@ import { showAlert } from "../../lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useApp } from "../../lib/store";
+import { createChild } from "../../lib/api";
 
 export default function AddChildScreen() {
   const router = useRouter();
@@ -19,24 +20,39 @@ export default function AddChildScreen() {
 
   const initial = name.trim() ? name.trim()[0].toUpperCase() : "+";
 
-  const handleAdd = () => {
+  const [saving, setSaving] = useState(false);
+
+  const handleAdd = async () => {
     if (!name.trim()) {
       showAlert("Missing Name", "Please enter the child's name.");
       return;
     }
-    dispatch({
-      type: "ADD_CHILD",
-      payload: {
-        id: Date.now().toString(),
-        familyId: state.auth.family?.id ?? "",
-        name: name.trim(),
-        notes: notes.trim() || undefined,
-        createdAt: new Date().toISOString(),
-      },
-    });
-    showAlert("Success", `${name} has been added.`, [
-      { text: "OK", onPress: () => router.back() },
-    ]);
+    const familyId = state.auth.family?.id;
+    if (!familyId) {
+      showAlert("Error", "No family found. Please create or join a family first.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const created = await createChild({ name: name.trim(), familyId });
+      dispatch({
+        type: "ADD_CHILD",
+        payload: {
+          id: created.id,
+          familyId,
+          name: created.name,
+          notes: notes.trim() || undefined,
+          createdAt: created.createdAt ?? new Date().toISOString(),
+        },
+      });
+      showAlert("Success", `${name} has been added.`, [
+        { text: "OK", onPress: () => router.back() },
+      ]);
+    } catch (err: any) {
+      showAlert("Error", err.message || "Failed to add child.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

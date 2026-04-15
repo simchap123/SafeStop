@@ -5,6 +5,7 @@ import {
   Pressable,
   ScrollView,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -12,6 +13,8 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useApp } from "../../lib/store";
 import { SessionState } from "../../lib/types";
 import type { Child } from "../../lib/types";
+import { createSession } from "../../lib/api";
+import { showAlert } from "../../lib/alert";
 
 const CHILD_COLORS = ["#818CF8", "#22C55E", "#F59E0B", "#EF4444", "#06B6D4"];
 
@@ -81,6 +84,7 @@ export default function CheckInScreen() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [location, setLocation] = useState("Detecting location...");
   const [locationDetected, setLocationDetected] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Simulate location detection
   React.useEffect(() => {
@@ -97,22 +101,32 @@ export default function CheckInScreen() {
     );
   }
 
-  function handleStart() {
-    if (selectedIds.length === 0) return;
-    const childId = selectedIds[0];
-    dispatch({
-      type: 'START_SESSION',
-      payload: {
-        id: Date.now().toString(),
+  async function handleStart() {
+    if (selectedIds.length === 0 || loading) return;
+    setLoading(true);
+    try {
+      const sessionData = await createSession({
         familyId: state.auth.family?.id ?? '',
-        driverId: state.auth.user?.id ?? '',
-        childId,
-        state: SessionState.DRIVING,
-        startedAt: new Date().toISOString(),
-        stops: [],
-      },
-    });
-    router.push("/(session)/active");
+        childIds: selectedIds,
+      });
+      dispatch({
+        type: 'START_SESSION',
+        payload: {
+          id: sessionData.id ?? Date.now().toString(),
+          familyId: sessionData.familyId ?? state.auth.family?.id ?? '',
+          driverId: sessionData.driverId ?? state.auth.user?.id ?? '',
+          childId: selectedIds[0],
+          state: SessionState.DRIVING,
+          startedAt: sessionData.startedAt ?? new Date().toISOString(),
+          stops: [],
+        },
+      });
+      router.push("/(session)/active");
+    } catch (err: any) {
+      showAlert("Error", err.message || "Failed to start session");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -192,19 +206,23 @@ export default function CheckInScreen() {
           style={({ pressed }) => [
             pressed && { opacity: 0.8 },
           ]}
-          disabled={selectedIds.length === 0}
+          disabled={selectedIds.length === 0 || loading}
         >
-          <Ionicons
-            name="play-circle-outline"
-            size={22}
-            color={selectedIds.length > 0 ? "#FFFFFF" : "#64748B"}
-          />
+          {loading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Ionicons
+              name="play-circle-outline"
+              size={22}
+              color={selectedIds.length > 0 ? "#FFFFFF" : "#64748B"}
+            />
+          )}
           <Text
             className={`text-lg font-bold ${
               selectedIds.length > 0 ? "text-white" : "text-dark-500"
             }`}
           >
-            Start Session
+            {loading ? "Starting..." : "Start Session"}
           </Text>
         </Pressable>
 

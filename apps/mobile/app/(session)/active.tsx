@@ -4,6 +4,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useApp } from "../../lib/store";
+import { updateSession } from "../../lib/api";
+import { showAlert } from "../../lib/alert";
 import MapView from "../../components/ui/MapView";
 
 function formatDuration(seconds: number): string {
@@ -42,7 +44,15 @@ export default function ActiveSessionScreen() {
     router.push("/(session)/stop-detected");
   }
 
-  function handleEndSession() {
+  async function handleEndSession() {
+    if (state.session?.id) {
+      try {
+        await updateSession(state.session.id, { status: 'ended' });
+      } catch (err: any) {
+        showAlert("Error", err.message || "Failed to end session");
+        return;
+      }
+    }
     router.push("/(session)/end-session");
   }
 

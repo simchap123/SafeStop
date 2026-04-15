@@ -10,6 +10,7 @@ import { showAlert } from "../../lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useApp, type CaregiverEntry } from "../../lib/store";
+import { updateFamily } from "../../lib/api";
 
 type Role = "Owner" | "Admin" | "Caregiver" | "Viewer";
 
@@ -60,7 +61,19 @@ export default function FamilyScreen() {
 
   const [familyName, setFamilyName] = useState(state.auth.family?.name ?? "My Family");
   const [isEditingName, setIsEditingName] = useState(false);
-  const inviteCode = "SAFE-JHN-4829";
+  const inviteCode = (state.auth.family as any)?.inviteCode ?? "SAFE-JHN-4829";
+
+  const handleSaveName = async () => {
+    const familyId = state.auth.family?.id;
+    if (!familyId) return;
+    try {
+      await updateFamily(familyId, { name: familyName });
+      setIsEditingName(false);
+      showAlert("Saved", "Family name updated successfully.");
+    } catch (err: any) {
+      showAlert("Error", err.message || "Failed to update family name.");
+    }
+  };
 
   const handleCopyCode = () => {
     showAlert("Copied", "Invite code copied to clipboard.");
@@ -115,7 +128,7 @@ export default function FamilyScreen() {
                 autoFocus
               />
               <Pressable
-                onPress={() => setIsEditingName(false)}
+                onPress={handleSaveName}
                 className="bg-primary-500 px-4 py-3.5 rounded-xl active:bg-primary-600"
               >
                 <Text className="text-white text-sm font-semibold">Save</Text>

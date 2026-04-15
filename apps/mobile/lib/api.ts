@@ -141,6 +141,40 @@ export async function createDestination(data: { name: string; address?: string; 
   return res.json();
 }
 
+export async function updateDestination(id: string, data: { name?: string; address?: string; radius?: number; isDefault?: boolean }) {
+  const res = await apiFetch(`/api/destinations/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to update destination");
+  return res.json();
+}
+
+export async function deleteDestination(id: string) {
+  const res = await apiFetch(`/api/destinations/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to delete destination");
+}
+
+// Families - update
+export async function updateFamily(id: string, data: { name?: string }) {
+  const res = await apiFetch(`/api/families/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to update family");
+  return res.json();
+}
+
+// Families - invite
+export async function inviteToFamily(data: { email: string; role: string; familyId: string }) {
+  const res = await apiFetch("/api/families/invite", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to send invite");
+  return res.json();
+}
+
 // Sessions
 export async function createSession(data: { familyId: string; childIds: string[]; destinationId?: string }) {
   const res = await apiFetch("/api/sessions", {

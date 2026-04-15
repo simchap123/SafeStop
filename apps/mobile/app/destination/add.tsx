@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import MapView from "../../components/ui/MapView";
 import { useApp } from "../../lib/store";
+import { createDestination } from "../../lib/api";
 
 type DestType = "Daycare" | "School" | "Babysitter" | "Family" | "Custom";
 
@@ -62,7 +63,9 @@ export default function AddDestinationScreen() {
 
   const radiusPercent = ((radius - 100) / 400) * 100;
 
-  const handleAdd = () => {
+  const [saving, setSaving] = useState(false);
+
+  const handleAdd = async () => {
     if (!label.trim()) {
       showAlert("Missing Label", "Please enter a destination name.");
       return;
@@ -71,23 +74,36 @@ export default function AddDestinationScreen() {
       showAlert("Missing Address", "Please enter an address.");
       return;
     }
-    dispatch({
-      type: "ADD_DESTINATION",
-      payload: {
-        id: Date.now().toString(),
-        familyId: state.auth.family?.id ?? "",
-        name: label.trim(),
-        address: address.trim(),
-        latitude: 0,
-        longitude: 0,
-        radius,
-        isDefault: false,
-        createdAt: new Date().toISOString(),
-      },
-    });
-    showAlert("Success", `${label} has been added.`, [
-      { text: "OK", onPress: () => router.back() },
-    ]);
+    const familyId = state.auth.family?.id;
+    if (!familyId) {
+      showAlert("Error", "No family found. Please create or join a family first.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const created = await createDestination({ name: label.trim(), address: address.trim(), familyId });
+      dispatch({
+        type: "ADD_DESTINATION",
+        payload: {
+          id: created.id,
+          familyId,
+          name: created.name ?? label.trim(),
+          address: created.address ?? address.trim(),
+          latitude: created.latitude ?? 0,
+          longitude: created.longitude ?? 0,
+          radius,
+          isDefault: false,
+          createdAt: created.createdAt ?? new Date().toISOString(),
+        },
+      });
+      showAlert("Success", `${label} has been added.`, [
+        { text: "OK", onPress: () => router.back() },
+      ]);
+    } catch (err: any) {
+      showAlert("Error", err.message || "Failed to add destination.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

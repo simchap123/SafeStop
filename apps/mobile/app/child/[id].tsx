@@ -11,6 +11,7 @@ import { showAlert } from "../../lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useApp } from "../../lib/store";
+import { updateChild, deleteChild } from "../../lib/api";
 
 const AVATAR_COLORS = [
   "#6366F1",
@@ -39,13 +40,23 @@ export default function ChildDetailScreen() {
 
   const initial = name.trim() ? name.trim()[0].toUpperCase() : "?";
 
-  const handleSave = () => {
-    if (!child) return;
-    dispatch({
-      type: "UPDATE_CHILD",
-      payload: { ...child, name, notes },
-    });
-    showAlert("Saved", "Child profile updated successfully.");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!child || !id) return;
+    setSaving(true);
+    try {
+      const updated = await updateChild(id, { name });
+      dispatch({
+        type: "UPDATE_CHILD",
+        payload: { ...child, name: updated.name ?? name, notes },
+      });
+      showAlert("Saved", "Child profile updated successfully.");
+    } catch (err: any) {
+      showAlert("Error", err.message || "Failed to update child.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleRemove = () => {
@@ -54,9 +65,15 @@ export default function ChildDetailScreen() {
       {
         text: "Remove",
         style: "destructive",
-        onPress: () => {
-          if (id) dispatch({ type: "REMOVE_CHILD", payload: id });
-          router.back();
+        onPress: async () => {
+          if (!id) return;
+          try {
+            await deleteChild(id);
+            dispatch({ type: "REMOVE_CHILD", payload: id });
+            router.back();
+          } catch (err: any) {
+            showAlert("Error", err.message || "Failed to remove child.");
+          }
         },
       },
     ]);

@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useApp } from "../../lib/store";
+import { SessionState } from "../../lib/types";
 
 export default function MissedConfirmationScreen() {
   const router = useRouter();
@@ -48,12 +49,12 @@ export default function MissedConfirmationScreen() {
   const elapsedText = `${minutes}:${String(seconds).padStart(2, "0")}`;
 
   function handleConfirmNow() {
-    router.replace("/(session)/stop-detected");
+    router.replace("/(session)/camera");
   }
 
   function handleFalseAlarm() {
-    dispatch({ type: 'END_SESSION' });
-    router.replace("/(tabs)");
+    dispatch({ type: 'UPDATE_SESSION', payload: { state: SessionState.DRIVING } });
+    router.replace("/(session)/active");
   }
 
   return (

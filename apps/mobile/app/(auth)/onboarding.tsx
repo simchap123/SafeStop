@@ -14,6 +14,9 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import ProgressBar from "../../components/ui/ProgressBar";
+import { createFamily, createChild, createDestination } from "../../lib/api";
+import { loadUserData } from "../../lib/load-data";
+import { useApp } from "../../lib/store";
 
 const TOTAL_STEPS = 5;
 
@@ -328,10 +331,13 @@ function StepPermissions({
 // ─── Main Onboarding Screen ──────────────────────────────────────────────────
 
 export default function OnboardingScreen() {
+  const { dispatch } = useApp();
   const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
 
   // Step 1 state
   const [familyName, setFamilyName] = useState("");
+  const [familyId, setFamilyId] = useState<string | null>(null);
 
   // Step 2 state
   const [childName, setChildName] = useState("");
@@ -352,6 +358,7 @@ export default function OnboardingScreen() {
   });
 
   const canProceed = () => {
+    if (submitting) return false;
     switch (step) {
       case 1:
         return familyName.trim().length > 0;
@@ -368,16 +375,42 @@ export default function OnboardingScreen() {
     }
   };
 
-  const handleNext = () => {
-    if (step < TOTAL_STEPS) {
-      setStep(step + 1);
-    } else {
-      // Final step -- complete onboarding
-      showAlert(
-        "Welcome to SafeStop!",
-        "Your account is set up and ready to protect your family.",
-        [{ text: "Let's Go", onPress: () => router.replace("/(tabs)") }]
-      );
+  const handleNext = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+
+    try {
+      if (step === 1) {
+        // Create family via API
+        const family = await createFamily(familyName.trim());
+        setFamilyId(family.id);
+      } else if (step === 2 && familyId) {
+        // Create child via API
+        await createChild({ name: childName.trim(), familyId });
+      } else if (step === 3 && familyId) {
+        // Create destination via API
+        await createDestination({
+          name: destinationLabel,
+          address: destinationAddress.trim(),
+          familyId,
+        });
+      }
+
+      if (step < TOTAL_STEPS) {
+        setStep(step + 1);
+      } else {
+        // Final step -- sync all data from API, then complete onboarding
+        await loadUserData(dispatch);
+        showAlert(
+          "Welcome to SafeStop!",
+          "Your account is set up and ready to protect your family.",
+          [{ text: "Let's Go", onPress: () => router.replace("/(tabs)") }]
+        );
+      }
+    } catch (err: any) {
+      showAlert("Error", err.message || "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -456,7 +489,7 @@ export default function OnboardingScreen() {
             </View>
             <View className="flex-1">
               <Button
-                title={step === TOTAL_STEPS ? "Finish" : "Next"}
+                title={submitting ? "Saving..." : step === TOTAL_STEPS ? "Finish" : "Next"}
                 onPress={handleNext}
                 disabled={!canProceed()}
               />

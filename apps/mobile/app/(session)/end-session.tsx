@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useApp } from "../../lib/store";
+import { updateSession } from "../../lib/api";
+import { showAlert } from "../../lib/alert";
 
 type EndReason =
   | "dropped_off"
@@ -16,6 +18,7 @@ export default function EndSessionScreen() {
   const { state, dispatch } = useApp();
   const [selectedReason, setSelectedReason] = useState<EndReason>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const child = state.children.find((c) => c.id === state.session?.childId);
   const childName = child?.name ?? "Child";
@@ -45,19 +48,30 @@ export default function EndSessionScreen() {
     },
   ];
 
-  function handleConfirm() {
-    if (!selectedReason) return;
+  async function handleConfirm() {
+    if (!selectedReason || loading) return;
 
     if (selectedReason === "dropped_off") {
       // If they haven't confirmed with photo yet, send to stop-detected
       router.replace("/(session)/stop-detected");
-    } else {
-      // No child or false trigger — end session directly
+      return;
+    }
+
+    // No child or false trigger — end session via API
+    setLoading(true);
+    try {
+      if (state.session?.id) {
+        await updateSession(state.session.id, { status: 'ended' });
+      }
       dispatch({ type: 'END_SESSION' });
       setConfirmed(true);
       setTimeout(() => {
         router.replace("/(tabs)");
       }, 1500);
+    } catch (err: any) {
+      showAlert("Error", err.message || "Failed to end session");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -168,7 +182,7 @@ export default function EndSessionScreen() {
       <View className="px-4 pb-6 pt-4">
         <TouchableOpacity
           onPress={handleConfirm}
-          disabled={!selectedReason}
+          disabled={!selectedReason || loading}
           className={`h-14 rounded-xl items-center justify-center flex-row gap-2 ${
             selectedReason
               ? "bg-primary-500"
@@ -176,17 +190,21 @@ export default function EndSessionScreen() {
           }`}
           activeOpacity={0.8}
         >
-          <Ionicons
-            name="checkmark-circle-outline"
-            size={20}
-            color={selectedReason ? "#FFFFFF" : "#64748B"}
-          />
+          {loading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={20}
+              color={selectedReason ? "#FFFFFF" : "#64748B"}
+            />
+          )}
           <Text
             className={`font-bold text-base ${
               selectedReason ? "text-white" : "text-dark-500"
             }`}
           >
-            Confirm & End Session
+            {loading ? "Ending..." : "Confirm & End Session"}
           </Text>
         </TouchableOpacity>
       </View>

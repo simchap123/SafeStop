@@ -79,7 +79,11 @@ export default function HomeScreen() {
   };
 
   const handleCheckIn = () => {
-    router.push("/(session)/checkin");
+    if (activeSession) {
+      router.push("/(session)/active");
+    } else {
+      router.push("/(session)/checkin");
+    }
   };
 
   // Derive child display data from store

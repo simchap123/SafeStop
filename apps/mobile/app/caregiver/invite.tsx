@@ -4,6 +4,7 @@ import { showAlert } from "../../lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useApp } from "../../lib/store";
+import { inviteToFamily } from "../../lib/api";
 
 type Role = "Caregiver" | "Viewer";
 
@@ -22,11 +23,12 @@ const ROLE_INFO: Record<Role, { title: string; description: string }> = {
 
 export default function InviteCaregiverScreen() {
   const router = useRouter();
-  const { dispatch } = useApp();
+  const { state, dispatch } = useApp();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("Caregiver");
+  const [sending, setSending] = useState(false);
 
-  const handleInvite = () => {
+  const handleInvite = async () => {
     if (!email.trim()) {
       showAlert("Missing Email", "Please enter an email address.");
       return;
@@ -38,23 +40,36 @@ export default function InviteCaregiverScreen() {
       return;
     }
 
-    const storeRole = role === "Caregiver" ? "co_parent" as const : "viewer" as const;
-    dispatch({
-      type: "ADD_CAREGIVER",
-      payload: {
-        id: Date.now().toString(),
-        userId: Date.now().toString(),
-        name: email.split("@")[0],
-        email: email.trim(),
-        role: storeRole,
-      },
-    });
+    const familyId = state.auth.family?.id;
+    if (!familyId) {
+      showAlert("Error", "No family found. Please create or join a family first.");
+      return;
+    }
 
-    showAlert(
-      "Invite Sent",
-      `An invitation has been sent to ${email} as a ${role}.`,
-      [{ text: "OK", onPress: () => router.back() }]
-    );
+    const storeRole = role === "Caregiver" ? "co_parent" as const : "viewer" as const;
+    setSending(true);
+    try {
+      await inviteToFamily({ email: email.trim(), role: storeRole, familyId });
+      dispatch({
+        type: "ADD_CAREGIVER",
+        payload: {
+          id: Date.now().toString(),
+          userId: Date.now().toString(),
+          name: email.split("@")[0],
+          email: email.trim(),
+          role: storeRole,
+        },
+      });
+      showAlert(
+        "Invite Sent",
+        `An invitation has been sent to ${email} as a ${role}.`,
+        [{ text: "OK", onPress: () => router.back() }]
+      );
+    } catch (err: any) {
+      showAlert("Error", err.message || "Failed to send invite.");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (

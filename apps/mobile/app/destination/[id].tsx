@@ -6,11 +6,12 @@ import {
   Pressable,
   ScrollView,
   Switch,
-  Alert,
 } from "react-native";
+import { showAlert } from "../../lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import MapView from "../../components/ui/MapView";
+import { useApp } from "../../lib/store";
 
 type DestType = "Daycare" | "School" | "Babysitter" | "Family" | "Custom";
 
@@ -32,16 +33,18 @@ const TYPE_COLORS: Record<DestType, string> = {
 
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
-const CHILDREN = ["Emma", "Liam", "Sophie"];
-
 export default function DestinationDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { state, dispatch } = useApp();
 
-  const [label, setLabel] = useState("Sunshine Daycare");
+  const destination = state.destinations.find((d) => d.id === id);
+  const childNames = state.children.map((c) => c.name);
+
+  const [label, setLabel] = useState(destination?.name ?? "");
   const [type, setType] = useState<DestType>("Daycare");
-  const [address, setAddress] = useState("123 Oak Lane, Springfield, IL 62701");
-  const [radius, setRadius] = useState(200);
+  const [address, setAddress] = useState(destination?.address ?? "");
+  const [radius, setRadius] = useState(destination?.radius ?? 200);
   const [activeDays, setActiveDays] = useState([
     true,
     true,
@@ -53,8 +56,8 @@ export default function DestinationDetailScreen() {
   ]);
   const [startTime, setStartTime] = useState("7:30 AM");
   const [endTime, setEndTime] = useState("8:15 AM");
-  const [linkedChild, setLinkedChild] = useState("Emma");
-  const [active, setActive] = useState(true);
+  const [linkedChild, setLinkedChild] = useState(childNames[0] ?? "");
+  const [active, setActive] = useState(destination?.isDefault ?? true);
 
   const toggleDay = (index: number) => {
     const updated = [...activeDays];
@@ -63,16 +66,34 @@ export default function DestinationDetailScreen() {
   };
 
   const handleSave = () => {
-    Alert.alert("Saved", "Destination updated successfully.");
+    if (!destination) return;
+    dispatch({
+      type: "UPDATE_DESTINATION",
+      payload: {
+        ...destination,
+        name: label,
+        address,
+        radius,
+        isDefault: active,
+      },
+    });
+    showAlert("Saved", "Destination updated successfully.");
   };
 
   const handleDelete = () => {
-    Alert.alert(
+    showAlert(
       "Delete Destination",
       "Are you sure you want to delete this destination?",
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => router.back() },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            if (id) dispatch({ type: "REMOVE_DESTINATION", payload: id });
+            router.back();
+          },
+        },
       ]
     );
   };
@@ -256,7 +277,7 @@ export default function DestinationDetailScreen() {
             Linked Child
           </Text>
           <View className="flex-row flex-wrap gap-2">
-            {CHILDREN.map((child) => (
+            {childNames.map((child) => (
               <Pressable
                 key={child}
                 onPress={() => setLinkedChild(child)}

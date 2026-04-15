@@ -1,7 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, Alert } from "react-native";
+import { View, Text, TextInput, Pressable, ScrollView } from "react-native";
+import { showAlert } from "../../lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useApp } from "../../lib/store";
 
 type Role = "Caregiver" | "Viewer";
 
@@ -20,22 +22,35 @@ const ROLE_INFO: Record<Role, { title: string; description: string }> = {
 
 export default function InviteCaregiverScreen() {
   const router = useRouter();
+  const { dispatch } = useApp();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("Caregiver");
 
   const handleInvite = () => {
     if (!email.trim()) {
-      Alert.alert("Missing Email", "Please enter an email address.");
+      showAlert("Missing Email", "Please enter an email address.");
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert("Invalid Email", "Please enter a valid email address.");
+      showAlert("Invalid Email", "Please enter a valid email address.");
       return;
     }
 
-    Alert.alert(
+    const storeRole = role === "Caregiver" ? "co_parent" as const : "viewer" as const;
+    dispatch({
+      type: "ADD_CAREGIVER",
+      payload: {
+        id: Date.now().toString(),
+        userId: Date.now().toString(),
+        name: email.split("@")[0],
+        email: email.trim(),
+        role: storeRole,
+      },
+    });
+
+    showAlert(
       "Invite Sent",
       `An invitation has been sent to ${email} as a ${role}.`,
       [{ text: "OK", onPress: () => router.back() }]

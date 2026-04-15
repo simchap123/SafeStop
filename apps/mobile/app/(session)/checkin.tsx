@@ -9,14 +9,27 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { MOCK_CHILDREN, type Child } from "../../lib/session-states";
+import { useApp } from "../../lib/store";
+import type { Child, SessionState } from "../../lib/types";
+
+const CHILD_COLORS = ["#818CF8", "#22C55E", "#F59E0B", "#EF4444", "#06B6D4"];
+
+function getInitials(name: string): string {
+  return name.slice(0, 2).toUpperCase();
+}
+
+function getChildColor(index: number): string {
+  return CHILD_COLORS[index % CHILD_COLORS.length];
+}
 
 function ChildCard({
   child,
+  index,
   selected,
   onToggle,
 }: {
   child: Child;
+  index: number;
   selected: boolean;
   onToggle: () => void;
 }) {
@@ -32,15 +45,19 @@ function ChildCard({
       {/* Avatar */}
       <View
         className="w-12 h-12 rounded-full items-center justify-center mr-4"
-        style={{ backgroundColor: child.color }}
+        style={{ backgroundColor: getChildColor(index) }}
       >
-        <Text className="text-white font-bold text-base">{child.initials}</Text>
+        <Text className="text-white font-bold text-base">{getInitials(child.name)}</Text>
       </View>
 
       {/* Info */}
       <View className="flex-1">
         <Text className="text-white font-semibold text-lg">{child.name}</Text>
-        <Text className="text-dark-400 text-sm">{child.age} years old</Text>
+        {child.dateOfBirth && (
+          <Text className="text-dark-400 text-sm">
+            {Math.floor((Date.now() - new Date(child.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))} years old
+          </Text>
+        )}
       </View>
 
       {/* Checkbox */}
@@ -57,6 +74,7 @@ function ChildCard({
 
 export default function CheckInScreen() {
   const router = useRouter();
+  const { state, dispatch } = useApp();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [location, setLocation] = useState("Detecting location...");
   const [locationDetected, setLocationDetected] = useState(false);
@@ -78,6 +96,19 @@ export default function CheckInScreen() {
 
   function handleStart() {
     if (selectedIds.length === 0) return;
+    const childId = selectedIds[0];
+    dispatch({
+      type: 'START_SESSION',
+      payload: {
+        id: Date.now().toString(),
+        familyId: state.auth.family?.id ?? '',
+        driverId: state.auth.user?.id ?? '',
+        childId,
+        state: SessionState.DRIVING,
+        startedAt: new Date().toISOString(),
+        stops: [],
+      },
+    });
     router.push("/(session)/active");
   }
 
@@ -108,10 +139,11 @@ export default function CheckInScreen() {
               Who's riding with you?
             </Text>
           </View>
-          {MOCK_CHILDREN.map((child) => (
+          {state.children.map((child, index) => (
             <ChildCard
               key={child.id}
               child={child}
+              index={index}
               selected={selectedIds.includes(child.id)}
               onToggle={() => toggleChild(child.id)}
             />

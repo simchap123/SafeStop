@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useApp } from "../../lib/store";
 
 type EndReason =
   | "dropped_off"
@@ -12,8 +13,13 @@ type EndReason =
 
 export default function EndSessionScreen() {
   const router = useRouter();
+  const { state, dispatch } = useApp();
   const [selectedReason, setSelectedReason] = useState<EndReason>(null);
   const [confirmed, setConfirmed] = useState(false);
+
+  const child = state.children.find((c) => c.id === state.session?.childId);
+  const childName = child?.name ?? "Child";
+  const childInitials = childName.slice(0, 2).toUpperCase();
 
   const reasons = [
     {
@@ -47,6 +53,7 @@ export default function EndSessionScreen() {
       router.replace("/(session)/stop-detected");
     } else {
       // No child or false trigger — end session directly
+      dispatch({ type: 'END_SESSION' });
       setConfirmed(true);
       setTimeout(() => {
         router.replace("/(tabs)");
@@ -144,10 +151,10 @@ export default function EndSessionScreen() {
         {/* Child info */}
         <View className="bg-dark-800 border border-dark-700 rounded-2xl p-4 mt-6 flex-row items-center gap-3">
           <View className="w-10 h-10 rounded-full bg-primary-500 items-center justify-center">
-            <Text className="text-white font-bold text-sm">EM</Text>
+            <Text className="text-white font-bold text-sm">{childInitials}</Text>
           </View>
           <View className="flex-1">
-            <Text className="text-white font-medium">Emma</Text>
+            <Text className="text-white font-medium">{childName}</Text>
             <Text className="text-dark-400 text-sm">Active session</Text>
           </View>
           <View className="flex-row items-center gap-1">

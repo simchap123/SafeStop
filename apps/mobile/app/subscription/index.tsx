@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { View, Text, Pressable, ScrollView, Alert } from "react-native";
+import { View, Text, Pressable, ScrollView } from "react-native";
+import { showAlert } from "../../lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -30,7 +31,7 @@ export default function SubscriptionScreen() {
   const [currentPlan] = useState<Plan>("free");
 
   const handleUpgrade = () => {
-    Alert.alert(
+    showAlert(
       "Upgrade to SafeStop+",
       "You will be charged $1.99/month. You can cancel anytime.",
       [
@@ -41,7 +42,7 @@ export default function SubscriptionScreen() {
   };
 
   const handleManage = () => {
-    Alert.alert("Manage Subscription", "Opening subscription management...");
+    showAlert("Manage Subscription", "Opening subscription management...");
   };
 
   return (

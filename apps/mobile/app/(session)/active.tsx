@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useApp } from "../../lib/store";
+import MapView from "../../components/ui/MapView";
 
 function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -14,8 +16,13 @@ function formatDuration(seconds: number): string {
 
 export default function ActiveSessionScreen() {
   const router = useRouter();
+  const { state } = useApp();
   const [elapsed, setElapsed] = useState(0);
   const [status, setStatus] = useState<"Driving" | "Stopped">("Driving");
+
+  const child = state.children.find((c) => c.id === state.session?.childId);
+  const childName = child?.name ?? "Child";
+  const childInitials = childName.slice(0, 2).toUpperCase();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -51,22 +58,23 @@ export default function ActiveSessionScreen() {
         {/* Child & Timer */}
         <View className="items-center mt-8">
           <View className="w-16 h-16 rounded-full bg-primary-500 items-center justify-center mb-4">
-            <Text className="text-white font-bold text-xl">EM</Text>
+            <Text className="text-white font-bold text-xl">{childInitials}</Text>
           </View>
-          <Text className="text-white text-xl font-semibold">Emma</Text>
+          <Text className="text-white text-xl font-semibold">{childName}</Text>
           <Text className="text-dark-300 text-base mt-1">Session Duration</Text>
           <Text className="text-white text-5xl font-bold mt-2 font-mono">
             {formatDuration(elapsed)}
           </Text>
         </View>
 
-        {/* Map Placeholder */}
-        <View className="mt-8 bg-dark-800 border border-dark-700 rounded-2xl h-48 items-center justify-center">
-          <Ionicons name="map-outline" size={32} color="#475569" style={{ marginBottom: 8 }} />
-          <Text className="text-dark-400 text-base font-medium">Map View</Text>
-          <Text className="text-dark-500 text-sm mt-1">
-            Live tracking coming soon
-          </Text>
+        {/* Live Map */}
+        <View className="mt-8 rounded-2xl overflow-hidden">
+          <MapView
+            latitude={40.7128}
+            longitude={-74.006}
+            height={192}
+            showPin={true}
+          />
         </View>
 
         {/* Status */}

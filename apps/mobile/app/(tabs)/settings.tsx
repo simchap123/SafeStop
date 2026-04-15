@@ -1,34 +1,29 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   Switch,
-  Alert,
 } from "react-native";
+import { showAlert } from "../../lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useApp } from "../../lib/store";
 
-// ── Mock data ──────────────────────────────────────────────
-const PROFILE = {
-  name: "Sarah Johnson",
-  email: "sarah.johnson@email.com",
-  initials: "SJ",
-};
+// -- Helpers --
+function computeAge(dateOfBirth?: string): number | null {
+  if (!dateOfBirth) return null;
+  const dob = new Date(dateOfBirth);
+  const now = new Date();
+  let age = now.getFullYear() - dob.getFullYear();
+  const m = now.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--;
+  return age;
+}
 
-const FAMILY = {
-  name: "Johnson Family",
-  members: 4,
-};
-
-const CHILDREN_LIST = [
-  { id: "1", name: "Emma", age: 7, school: "Sunnyvale Elementary" },
-  { id: "2", name: "Lucas", age: 10, school: "Westfield Middle" },
-];
-
-// ── Section component ──────────────────────────────────────
+// -- Section component --
 function SectionHeader({ title }: { title: string }) {
   return (
     <Text className="text-dark-400 text-xs font-semibold uppercase tracking-wider mb-3 mt-6 px-4">
@@ -107,19 +102,30 @@ function ToggleRow({
   );
 }
 
-// ── Main Screen ────────────────────────────────────────────
+// -- Main Screen --
 export default function SettingsScreen() {
   const router = useRouter();
-  const [autoCheckIn, setAutoCheckIn] = useState(true);
-  const [photoOptional, setPhotoOptional] = useState(false);
+  const { state, dispatch } = useApp();
+
+  const user = state.auth.user;
+  const family = state.auth.family;
+  const children = state.children;
+
+  const profileName = user?.displayName ?? "Unknown";
+  const profileEmail = user?.email ?? "";
+  const familyName = family?.name ?? "No Family";
+  const memberCount = family?.members?.length ?? 0;
 
   const handleSignOut = () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+    showAlert("Sign Out", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Sign Out",
         style: "destructive",
-        onPress: () => router.push("/"),
+        onPress: () => {
+          dispatch({ type: "LOGOUT" });
+          router.push("/");
+        },
       },
     ]);
   };
@@ -132,7 +138,7 @@ export default function SettingsScreen() {
           <Text className="text-white text-2xl font-bold">Settings</Text>
         </View>
 
-        {/* ── Profile ──────────────────────────── */}
+        {/* -- Profile -- */}
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => router.push("/profile")}
@@ -141,44 +147,48 @@ export default function SettingsScreen() {
           <View className="w-20 h-20 rounded-full bg-primary-500/20 items-center justify-center mb-3">
             <Ionicons name="person" size={32} color="#818CF8" />
           </View>
-          <Text className="text-white text-xl font-semibold">{PROFILE.name}</Text>
-          <Text className="text-dark-400 text-sm mt-1">{PROFILE.email}</Text>
+          <Text className="text-white text-xl font-semibold">{profileName}</Text>
+          <Text className="text-dark-400 text-sm mt-1">{profileEmail}</Text>
           <Text className="text-primary-400 text-xs mt-2 font-medium">
             Edit Profile
           </Text>
         </TouchableOpacity>
 
-        {/* ── Account ────────────────────────────── */}
+        {/* -- Account -- */}
         <SectionHeader title="Account" />
         <View className="bg-dark-800 border border-dark-700 rounded-2xl mx-4 overflow-hidden">
           <Row label="Profile" icon="person-outline" chevron onPress={() => router.push("/profile")} />
-          <Row label="Family" icon="people-outline" value={FAMILY.name} chevron onPress={() => router.push("/family")} />
-          <Row label="Members" icon="people-outline" value={`${FAMILY.members} people`} />
+          <Row label="Family" icon="people-outline" value={familyName} chevron onPress={() => router.push("/family")} />
+          <Row label="Members" icon="people-outline" value={`${memberCount} people`} />
         </View>
 
-        {/* ── Children ─────────────────────────── */}
+        {/* -- Children -- */}
         <SectionHeader title="Children" />
         <View className="bg-dark-800 border border-dark-700 rounded-2xl mx-4 overflow-hidden">
-          {CHILDREN_LIST.map((child) => (
-            <TouchableOpacity
-              key={child.id}
-              activeOpacity={0.7}
-              onPress={() => router.push(`/child/${child.id}`)}
-              className="flex-row items-center justify-between py-3.5 px-4 border-b border-dark-700/50"
-              style={{ minHeight: 48 }}
-            >
-              <View className="flex-row items-center gap-3">
-                <Ionicons name="body-outline" size={20} color="#94A3B8" />
-                <View>
-                  <Text className="text-white text-base">{child.name}</Text>
-                  <Text className="text-dark-400 text-xs">
-                    Age {child.age} — {child.school}
-                  </Text>
+          {children.map((child) => {
+            const age = computeAge(child.dateOfBirth);
+            return (
+              <TouchableOpacity
+                key={child.id}
+                activeOpacity={0.7}
+                onPress={() => router.push(`/child/${child.id}`)}
+                className="flex-row items-center justify-between py-3.5 px-4 border-b border-dark-700/50"
+                style={{ minHeight: 48 }}
+              >
+                <View className="flex-row items-center gap-3">
+                  <Ionicons name="body-outline" size={20} color="#94A3B8" />
+                  <View>
+                    <Text className="text-white text-base">{child.name}</Text>
+                    <Text className="text-dark-400 text-xs">
+                      {age !== null ? `Age ${age}` : ""}
+                      {child.notes ? ` \u2014 ${child.notes}` : ""}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color="#64748B" />
-            </TouchableOpacity>
-          ))}
+                <Ionicons name="chevron-forward" size={16} color="#64748B" />
+              </TouchableOpacity>
+            );
+          })}
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => router.push("/child")}
@@ -192,7 +202,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* ── Destinations ─────────────────────── */}
+        {/* -- Destinations -- */}
         <SectionHeader title="Destinations" />
         <View className="bg-dark-800 border border-dark-700 rounded-2xl mx-4 overflow-hidden">
           <Row
@@ -203,22 +213,22 @@ export default function SettingsScreen() {
           />
         </View>
 
-        {/* ── Preferences ──────────────────────── */}
+        {/* -- Preferences -- */}
         <SectionHeader title="Preferences" />
         <View className="bg-dark-800 border border-dark-700 rounded-2xl mx-4 overflow-hidden">
           <ToggleRow
             label="Auto Check-In"
             subtitle="Automatically start sessions based on location"
             icon="location-outline"
-            value={autoCheckIn}
-            onToggle={setAutoCheckIn}
+            value={state.settings.autoCheckin}
+            onToggle={(v) => dispatch({ type: "UPDATE_SETTINGS", payload: { autoCheckin: v } })}
           />
           <ToggleRow
             label="Photo Optional"
             subtitle="Allow confirmations without a photo"
             icon="camera-outline"
-            value={photoOptional}
-            onToggle={setPhotoOptional}
+            value={state.settings.photoOptional}
+            onToggle={(v) => dispatch({ type: "UPDATE_SETTINGS", payload: { photoOptional: v } })}
           />
           <Row
             label="Notifications"
@@ -234,7 +244,7 @@ export default function SettingsScreen() {
           />
         </View>
 
-        {/* ── App Info ─────────────────────────── */}
+        {/* -- App Info -- */}
         <SectionHeader title="App" />
         <View className="bg-dark-800 border border-dark-700 rounded-2xl mx-4 overflow-hidden">
           <Row
@@ -246,7 +256,7 @@ export default function SettingsScreen() {
           />
         </View>
 
-        {/* ── Sign Out ─────────────────────────── */}
+        {/* -- Sign Out -- */}
         <View className="mx-4 mt-8 mb-10">
           <TouchableOpacity
             activeOpacity={0.8}

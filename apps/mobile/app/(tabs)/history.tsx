@@ -1,85 +1,70 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useApp } from "../../lib/store";
+import { SessionState } from "../../lib/types";
 
-// ── Filter options ─────────────────────────────────────────
+// -- Filter options --
 const FILTERS = ["All", "Today", "This Week", "This Month"] as const;
 type Filter = (typeof FILTERS)[number];
 
-// ── Mock trip data ─────────────────────────────────────────
-const TRIPS = [
-  {
-    id: "1",
-    date: "Today",
-    time: "8:15 AM — 8:42 AM",
-    child: "Emma",
-    status: "confirmed" as const,
-    confirmationType: "photo",
-    duration: "27 min",
-    destination: "Sunnyvale Elementary",
-  },
-  {
-    id: "2",
-    date: "Today",
-    time: "7:30 AM — 7:48 AM",
-    child: "Emma",
-    status: "confirmed" as const,
-    confirmationType: "no-photo",
-    duration: "18 min",
-    destination: "Swim Practice",
-  },
-  {
-    id: "3",
-    date: "Yesterday",
-    time: "3:00 PM — 3:15 PM",
-    child: "Lucas",
-    status: "confirmed" as const,
-    confirmationType: "photo",
-    duration: "15 min",
-    destination: "Soccer Practice",
-  },
-  {
-    id: "4",
-    date: "Yesterday",
-    time: "8:10 AM — 8:35 AM",
-    child: "Emma",
-    status: "missed" as const,
-    confirmationType: "no-photo",
-    duration: "25 min",
-    destination: "Sunnyvale Elementary",
-  },
-  {
-    id: "5",
-    date: "Mon, Apr 12",
-    time: "8:20 AM — 8:40 AM",
-    child: "Emma",
-    status: "confirmed" as const,
-    confirmationType: "photo",
-    duration: "20 min",
-    destination: "Sunnyvale Elementary",
-  },
-  {
-    id: "6",
-    date: "Mon, Apr 12",
-    time: "4:00 PM — 4:12 PM",
-    child: "Lucas",
-    status: "cancelled" as const,
-    confirmationType: "no-photo",
-    duration: "12 min",
-    destination: "Home",
-  },
-  {
-    id: "7",
-    date: "Sun, Apr 11",
-    time: "10:00 AM — 10:22 AM",
-    child: "Lucas",
-    status: "confirmed" as const,
-    confirmationType: "photo",
-    duration: "22 min",
-    destination: "Grandma's House",
-  },
-];
+// -- Helpers --
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function isToday(iso: string): boolean {
+  const d = new Date(iso);
+  const now = new Date();
+  return d.toDateString() === now.toDateString();
+}
+
+function isYesterday(iso: string): boolean {
+  const d = new Date(iso);
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return d.toDateString() === yesterday.toDateString();
+}
+
+function isThisWeek(iso: string): boolean {
+  const d = new Date(iso);
+  const now = new Date();
+  const weekAgo = new Date();
+  weekAgo.setDate(now.getDate() - 7);
+  return d >= weekAgo && d <= now;
+}
+
+function isThisMonth(iso: string): boolean {
+  const d = new Date(iso);
+  const now = new Date();
+  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+}
+
+function dateLabel(iso: string): string {
+  if (isToday(iso)) return "Today";
+  if (isYesterday(iso)) return "Yesterday";
+  const d = new Date(iso);
+  return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+}
+
+function durationMinutes(startIso: string, endIso?: string): string {
+  if (!endIso) return "--";
+  const ms = new Date(endIso).getTime() - new Date(startIso).getTime();
+  return `${Math.round(ms / 60000)} min`;
+}
+
+interface TripDisplay {
+  id: string;
+  date: string;
+  time: string;
+  child: string;
+  status: "confirmed" | "missed" | "cancelled";
+  confirmationType: "photo" | "no-photo";
+  duration: string;
+  destination: string;
+}
 
 function statusBadge(status: "confirmed" | "missed" | "cancelled") {
   switch (status) {
@@ -94,17 +79,63 @@ function statusBadge(status: "confirmed" | "missed" | "cancelled") {
 
 export default function HistoryScreen() {
   const [activeFilter, setActiveFilter] = useState<Filter>("All");
+  const { state } = useApp();
 
-  const filteredTrips = TRIPS.filter((trip) => {
-    if (activeFilter === "All") return true;
-    if (activeFilter === "Today") return trip.date === "Today";
-    if (activeFilter === "This Week")
-      return ["Today", "Yesterday", "Mon, Apr 12", "Sun, Apr 11"].includes(trip.date);
-    return true; // "This Month" — show all mock data
-  });
+  // Map session history to trip display format
+  const allTrips: TripDisplay[] = useMemo(() => {
+    return state.history.map((session) => {
+      const child = state.children.find((c) => c.id === session.childId);
+      const dest = state.destinations.find((d) => d.id === session.destinationId);
+
+      // Determine status
+      let status: "confirmed" | "missed" | "cancelled";
+      if (session.state === SessionState.CONFIRMED_SAFE) {
+        status = "confirmed";
+      } else if (
+        session.state === SessionState.ALERT_TRIGGERED ||
+        session.state === SessionState.ESCALATED
+      ) {
+        status = "missed";
+      } else {
+        status = "cancelled";
+      }
+
+      // Check if any stop had a photo confirmation
+      const hasPhoto = session.stops.some(
+        (stop) => stop.confirmation?.type === "photo"
+      );
+
+      return {
+        id: session.id,
+        date: dateLabel(session.startedAt),
+        time: `${formatTime(session.startedAt)} \u2014 ${session.endedAt ? formatTime(session.endedAt) : "ongoing"}`,
+        child: child?.name ?? "Unknown",
+        status,
+        confirmationType: hasPhoto ? ("photo" as const) : ("no-photo" as const),
+        duration: durationMinutes(session.startedAt, session.endedAt),
+        destination: dest?.name ?? "Unknown",
+        _startedAt: session.startedAt, // keep for filtering
+      };
+    });
+  }, [state.history, state.children, state.destinations]);
+
+  const filteredTrips = useMemo(() => {
+    return allTrips.filter((trip) => {
+      // Use the raw startedAt from the matching session
+      const session = state.history.find((s) => s.id === trip.id);
+      if (!session) return false;
+      const iso = session.startedAt;
+
+      if (activeFilter === "All") return true;
+      if (activeFilter === "Today") return isToday(iso);
+      if (activeFilter === "This Week") return isThisWeek(iso);
+      if (activeFilter === "This Month") return isThisMonth(iso);
+      return true;
+    });
+  }, [allTrips, activeFilter, state.history]);
 
   // Group by date
-  const grouped = filteredTrips.reduce<Record<string, typeof TRIPS>>((acc, trip) => {
+  const grouped = filteredTrips.reduce<Record<string, TripDisplay[]>>((acc, trip) => {
     if (!acc[trip.date]) acc[trip.date] = [];
     acc[trip.date].push(trip);
     return acc;

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Text, Pressable, FlatList } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useApp, type CaregiverEntry } from "../../lib/store";
 
 type Role = "Primary" | "Caregiver" | "Viewer";
 type InviteStatus = "Accepted" | "Pending";
@@ -33,60 +34,27 @@ const STATUS_STYLES: Record<InviteStatus, { bg: string; text: string }> = {
   Pending: { bg: "bg-warning-500/15", text: "text-warning-500" },
 };
 
-const MOCK_CAREGIVERS: CaregiverItem[] = [
-  {
-    id: "c1",
-    name: "Sarah Johnson",
-    email: "sarah@email.com",
-    role: "Primary",
+function mapRole(role: CaregiverEntry["role"]): Role {
+  if (role === "primary_caregiver") return "Primary";
+  if (role === "co_parent") return "Caregiver";
+  return "Viewer";
+}
+
+function toCaregiverItem(entry: CaregiverEntry): CaregiverItem {
+  return {
+    id: entry.id,
+    name: entry.name,
+    email: entry.email,
+    role: mapRole(entry.role),
     status: "Accepted",
     notifications: {
-      tripStart: true,
+      tripStart: entry.role === "primary_caregiver",
       confirmation: true,
       missedConfirmation: true,
-      offline: true,
+      offline: entry.role === "primary_caregiver",
     },
-  },
-  {
-    id: "c2",
-    name: "Mike Johnson",
-    email: "mike@email.com",
-    role: "Caregiver",
-    status: "Accepted",
-    notifications: {
-      tripStart: false,
-      confirmation: true,
-      missedConfirmation: true,
-      offline: false,
-    },
-  },
-  {
-    id: "c3",
-    name: "Grandma Rose",
-    email: "rose@email.com",
-    role: "Viewer",
-    status: "Accepted",
-    notifications: {
-      tripStart: false,
-      confirmation: false,
-      missedConfirmation: true,
-      offline: false,
-    },
-  },
-  {
-    id: "c4",
-    name: "Uncle Dave",
-    email: "dave@email.com",
-    role: "Caregiver",
-    status: "Pending",
-    notifications: {
-      tripStart: false,
-      confirmation: false,
-      missedConfirmation: false,
-      offline: false,
-    },
-  },
-];
+  };
+}
 
 interface NotifToggleProps {
   label: string;
@@ -115,8 +83,9 @@ function NotifToggle({ label, active, onToggle }: NotifToggleProps) {
 
 export default function CaregiverListScreen() {
   const router = useRouter();
+  const { state } = useApp();
   const [caregivers, setCaregivers] =
-    useState<CaregiverItem[]>(MOCK_CAREGIVERS);
+    useState<CaregiverItem[]>(state.caregivers.map(toCaregiverItem));
 
   const toggleNotification = (
     caregiverId: string,

@@ -3,9 +3,11 @@ import { View, Text, TouchableOpacity, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useApp } from "../../lib/store";
 
 export default function ConfirmedScreen() {
   const router = useRouter();
+  const { dispatch } = useApp();
   const [timestamp] = useState(new Date());
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -41,6 +43,7 @@ export default function ConfirmedScreen() {
   }
 
   function handleEndSession() {
+    dispatch({ type: 'END_SESSION' });
     router.push("/(session)/end-session");
   }
 

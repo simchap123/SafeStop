@@ -3,11 +3,17 @@ import { View, Text, TouchableOpacity, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useApp } from "../../lib/store";
 
 export default function MissedConfirmationScreen() {
   const router = useRouter();
+  const { state, dispatch } = useApp();
   const pulseAnim = useRef(new Animated.Value(0.6)).current;
   const [elapsedSinceAlert, setElapsedSinceAlert] = useState(0);
+
+  const child = state.children.find((c) => c.id === state.session?.childId);
+  const childName = child?.name ?? "Child";
+  const childInitials = childName.slice(0, 2).toUpperCase();
 
   // Pulsing urgency animation
   useEffect(() => {
@@ -46,6 +52,7 @@ export default function MissedConfirmationScreen() {
   }
 
   function handleFalseAlarm() {
+    dispatch({ type: 'END_SESSION' });
     router.replace("/(tabs)");
   }
 
@@ -99,10 +106,10 @@ export default function MissedConfirmationScreen() {
         {/* Child info */}
         <View className="bg-dark-800 border border-dark-700 rounded-2xl p-4 mt-4 w-full flex-row items-center">
           <View className="w-12 h-12 rounded-full bg-primary-500 items-center justify-center mr-4">
-            <Text className="text-white font-bold text-base">EM</Text>
+            <Text className="text-white font-bold text-base">{childInitials}</Text>
           </View>
           <View>
-            <Text className="text-white font-semibold text-base">Emma</Text>
+            <Text className="text-white font-semibold text-base">{childName}</Text>
             <Text className="text-dark-400 text-sm">
               Last confirmed: Not yet
             </Text>

@@ -6,8 +6,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
 } from "react-native";
+import { showAlert } from "../../lib/alert";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -373,7 +373,7 @@ export default function OnboardingScreen() {
       setStep(step + 1);
     } else {
       // Final step -- complete onboarding
-      Alert.alert(
+      showAlert(
         "Welcome to SafeStop!",
         "Your account is set up and ready to protect your family.",
         [{ text: "Let's Go", onPress: () => router.replace("/(tabs)") }]

@@ -5,10 +5,11 @@ import {
   TextInput,
   Pressable,
   ScrollView,
-  Alert,
 } from "react-native";
+import { showAlert } from "../../lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useApp, type CaregiverEntry } from "../../lib/store";
 
 type Role = "Owner" | "Admin" | "Caregiver" | "Viewer";
 
@@ -26,46 +27,47 @@ const ROLE_STYLES: Record<Role, { bg: string; text: string }> = {
   Viewer: { bg: "bg-dark-600", text: "text-dark-300" },
 };
 
-const MOCK_MEMBERS: FamilyMember[] = [
-  {
-    id: "m1",
-    name: "Sarah Johnson",
-    email: "sarah@email.com",
-    role: "Owner",
-  },
-  {
-    id: "m2",
-    name: "Mike Johnson",
-    email: "mike@email.com",
-    role: "Admin",
-  },
-  {
-    id: "m3",
-    name: "Grandma Rose",
-    email: "rose@email.com",
-    role: "Caregiver",
-  },
-  {
-    id: "m4",
-    name: "Uncle Dave",
-    email: "dave@email.com",
-    role: "Viewer",
-  },
-];
+function mapCaregiverRole(role: CaregiverEntry["role"]): Role {
+  if (role === "primary_caregiver") return "Admin";
+  if (role === "co_parent") return "Caregiver";
+  return "Viewer";
+}
 
 export default function FamilyScreen() {
   const router = useRouter();
-  const [familyName, setFamilyName] = useState("Johnson Family");
+  const { state } = useApp();
+
+  const ownerMember: FamilyMember | null = state.auth.user
+    ? {
+        id: state.auth.user.id,
+        name: state.auth.user.displayName,
+        email: state.auth.user.email,
+        role: "Owner",
+      }
+    : null;
+
+  const caregiverMembers: FamilyMember[] = state.caregivers.map((cg) => ({
+    id: cg.id,
+    name: cg.name,
+    email: cg.email,
+    role: mapCaregiverRole(cg.role),
+  }));
+
+  const members: FamilyMember[] = [
+    ...(ownerMember ? [ownerMember] : []),
+    ...caregiverMembers,
+  ];
+
+  const [familyName, setFamilyName] = useState(state.auth.family?.name ?? "My Family");
   const [isEditingName, setIsEditingName] = useState(false);
-  const [members] = useState<FamilyMember[]>(MOCK_MEMBERS);
   const inviteCode = "SAFE-JHN-4829";
 
   const handleCopyCode = () => {
-    Alert.alert("Copied", "Invite code copied to clipboard.");
+    showAlert("Copied", "Invite code copied to clipboard.");
   };
 
   const handleLeaveFamily = () => {
-    Alert.alert(
+    showAlert(
       "Leave Family",
       "Are you sure you want to leave this family? You will lose access to all shared children and trip data.",
       [

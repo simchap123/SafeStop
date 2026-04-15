@@ -3,11 +3,14 @@ import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useApp } from "../../lib/store";
+import { SessionState } from "../../lib/types";
 
 const CONFIRMATION_TIMEOUT_SECONDS = 120; // 2 minutes
 
 export default function StopDetectedScreen() {
   const router = useRouter();
+  const { state, dispatch } = useApp();
   const [countdown, setCountdown] = useState(CONFIRMATION_TIMEOUT_SECONDS);
 
   useEffect(() => {
@@ -27,6 +30,7 @@ export default function StopDetectedScreen() {
   }
 
   function handleConfirmWithoutPhoto() {
+    dispatch({ type: 'UPDATE_SESSION', payload: { state: SessionState.CONFIRMED_SAFE } });
     router.replace("/(session)/confirmed");
   }
 
@@ -36,6 +40,7 @@ export default function StopDetectedScreen() {
   }
 
   function handleNoChild() {
+    dispatch({ type: 'END_SESSION' });
     router.replace("/(session)/confirmed");
   }
 

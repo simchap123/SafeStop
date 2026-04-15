@@ -1,74 +1,29 @@
-import React, { useState } from "react";
+import React from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useApp } from "../../lib/store";
+import type { Alert } from "../../lib/types";
 
-// ── Mock data ──────────────────────────────────────────────
-interface Alert {
-  id: string;
-  message: string;
-  time: string;
-  date: string;
-  child: string;
-  severity: "critical" | "warning";
-  resolved: boolean;
-  resolvedBy?: string;
-  resolvedAt?: string;
+// -- Helpers --
+function formatAlertTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
-const INITIAL_ALERTS: Alert[] = [
-  {
-    id: "1",
-    message: "No confirmation received",
-    time: "12:34 PM",
-    date: "Today",
-    child: "Emma",
-    severity: "critical",
-    resolved: false,
-  },
-  {
-    id: "2",
-    message: "Session exceeded 30-minute limit",
-    time: "11:15 AM",
-    date: "Today",
-    child: "Lucas",
-    severity: "warning",
-    resolved: false,
-  },
-  {
-    id: "3",
-    message: "No confirmation received",
-    time: "8:45 AM",
-    date: "Yesterday",
-    child: "Emma",
-    severity: "critical",
-    resolved: true,
-    resolvedBy: "Sarah (manual)",
-    resolvedAt: "8:47 AM",
-  },
-  {
-    id: "4",
-    message: "Child not detected at destination",
-    time: "3:30 PM",
-    date: "Mon, Apr 12",
-    child: "Lucas",
-    severity: "warning",
-    resolved: true,
-    resolvedBy: "Auto-resolved",
-    resolvedAt: "3:32 PM",
-  },
-  {
-    id: "5",
-    message: "No confirmation received",
-    time: "8:40 AM",
-    date: "Mon, Apr 12",
-    child: "Emma",
-    severity: "critical",
-    resolved: true,
-    resolvedBy: "Sarah (photo confirmation)",
-    resolvedAt: "8:42 AM",
-  },
-];
+function formatAlertDate(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) return "Today";
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+}
+
+function severityToDisplay(severity: string): "critical" | "warning" {
+  return severity === "high" || severity === "critical" ? "critical" : "warning";
+}
 
 function severityIcon(severity: "critical" | "warning", resolved: boolean) {
   if (resolved) {
@@ -80,19 +35,19 @@ function severityIcon(severity: "critical" | "warning", resolved: boolean) {
 }
 
 export default function AlertsScreen() {
-  const [alerts, setAlerts] = useState(INITIAL_ALERTS);
+  const { state, dispatch } = useApp();
+  const alerts = state.alerts;
 
-  const activeAlerts = alerts.filter((a) => !a.resolved);
-  const resolvedAlerts = alerts.filter((a) => a.resolved);
+  const activeAlerts = alerts.filter((a) => !a.resolvedAt);
+  const resolvedAlerts = alerts.filter((a) => !!a.resolvedAt);
 
   const resolveAlert = (id: string) => {
-    setAlerts((prev) =>
-      prev.map((a) =>
-        a.id === id
-          ? { ...a, resolved: true, resolvedBy: "Sarah (manual)", resolvedAt: "Just now" }
-          : a
-      )
-    );
+    const userName = state.auth.user?.displayName ?? "User";
+    dispatch({ type: "RESOLVE_ALERT", payload: { id, resolvedBy: `${userName} (manual)` } });
+  };
+
+  const dismissAlert = (id: string) => {
+    dispatch({ type: "DISMISS_ALERT", payload: id });
   };
 
   const severityStyle = (severity: "critical" | "warning", resolved: boolean) => {
@@ -102,6 +57,10 @@ export default function AlertsScreen() {
     return severity === "critical"
       ? { border: "border-danger-500/40", bg: "bg-danger-500/10" }
       : { border: "border-warning-500/40", bg: "bg-warning-500/10" };
+  };
+
+  const getChildName = (childId: string) => {
+    return state.children.find((c) => c.id === childId)?.name ?? "Unknown";
   };
 
   return (
@@ -115,14 +74,15 @@ export default function AlertsScreen() {
       </View>
 
       <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
-        {/* ── Active Alerts ─────────────────────── */}
+        {/* -- Active Alerts -- */}
         {activeAlerts.length > 0 && (
           <View className="mt-4">
             <Text className="text-danger-500 text-xs font-semibold uppercase tracking-wider mb-3">
               Active Alerts
             </Text>
             {activeAlerts.map((alert) => {
-              const style = severityStyle(alert.severity, false);
+              const displaySeverity = severityToDisplay(alert.severity);
+              const style = severityStyle(displaySeverity, false);
               return (
                 <View
                   key={alert.id}
@@ -130,33 +90,42 @@ export default function AlertsScreen() {
                 >
                   <View className="flex-row items-start justify-between mb-2">
                     <View className="flex-row items-center gap-2 flex-1">
-                      {severityIcon(alert.severity, false)}
+                      {severityIcon(displaySeverity, false)}
                       <View className="flex-1">
                         <Text className="text-white text-base font-semibold">
                           {alert.message}
                         </Text>
                         <Text className="text-dark-300 text-sm mt-0.5">
-                          {alert.child} — {alert.time}
+                          {getChildName(alert.childId)} {"\u2014"} {formatAlertTime(alert.triggeredAt)}
                         </Text>
                       </View>
                     </View>
                   </View>
-                  <TouchableOpacity
-                    onPress={() => resolveAlert(alert.id)}
-                    activeOpacity={0.8}
-                    className="bg-white/10 rounded-xl h-14 items-center justify-center mt-2"
-                  >
-                    <Text className="text-white text-sm font-semibold">
-                      Resolve
-                    </Text>
-                  </TouchableOpacity>
+                  <View className="flex-row gap-2 mt-2">
+                    <TouchableOpacity
+                      onPress={() => resolveAlert(alert.id)}
+                      activeOpacity={0.8}
+                      className="flex-1 bg-white/10 rounded-xl h-14 items-center justify-center"
+                    >
+                      <Text className="text-white text-sm font-semibold">
+                        Resolve
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => dismissAlert(alert.id)}
+                      activeOpacity={0.8}
+                      className="bg-white/5 rounded-xl h-14 px-4 items-center justify-center"
+                    >
+                      <Ionicons name="close" size={18} color="#94A3B8" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               );
             })}
           </View>
         )}
 
-        {/* ── Empty Active State ────────────────── */}
+        {/* -- Empty Active State -- */}
         {activeAlerts.length === 0 && (
           <View className="items-center justify-center py-16 mt-4">
             <View className="w-20 h-20 rounded-full bg-safe-500/15 items-center justify-center mb-4">
@@ -171,14 +140,15 @@ export default function AlertsScreen() {
           </View>
         )}
 
-        {/* ── Resolved Alerts ───────────────────── */}
+        {/* -- Resolved Alerts -- */}
         {resolvedAlerts.length > 0 && (
           <View className="mt-6">
             <Text className="text-dark-400 text-xs font-semibold uppercase tracking-wider mb-3">
               Resolved
             </Text>
             {resolvedAlerts.map((alert) => {
-              const style = severityStyle(alert.severity, true);
+              const displaySeverity = severityToDisplay(alert.severity);
+              const style = severityStyle(displaySeverity, true);
               return (
                 <View
                   key={alert.id}
@@ -186,18 +156,18 @@ export default function AlertsScreen() {
                   style={{ opacity: 0.6 }}
                 >
                   <View className="flex-row items-center gap-2 mb-1">
-                    {severityIcon(alert.severity, true)}
+                    {severityIcon(displaySeverity, true)}
                     <Text className="text-dark-300 text-base font-medium flex-1">
                       {alert.message}
                     </Text>
                   </View>
                   <Text className="text-dark-400 text-xs">
-                    {alert.child} — {alert.date} {alert.time}
+                    {getChildName(alert.childId)} {"\u2014"} {formatAlertDate(alert.triggeredAt)} {formatAlertTime(alert.triggeredAt)}
                   </Text>
                   <View className="flex-row items-center gap-1 mt-2">
                     <Ionicons name="checkmark-circle" size={14} color="#22C55E" />
                     <Text className="text-dark-500 text-xs">
-                      Resolved by {alert.resolvedBy} at {alert.resolvedAt}
+                      Resolved by {alert.resolvedBy} at {alert.resolvedAt ? formatAlertTime(alert.resolvedAt) : ""}
                     </Text>
                   </View>
                 </View>

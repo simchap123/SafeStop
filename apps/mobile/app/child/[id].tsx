@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,32 +6,11 @@ import {
   Pressable,
   ScrollView,
   Switch,
-  Alert,
 } from "react-native";
+import { showAlert } from "../../lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
-
-interface Destination {
-  id: string;
-  label: string;
-  type: string;
-}
-
-interface Caregiver {
-  id: string;
-  name: string;
-  role: string;
-}
-
-const MOCK_DESTINATIONS: Destination[] = [
-  { id: "d1", label: "Sunshine Daycare", type: "Daycare" },
-  { id: "d2", label: "Lincoln Elementary", type: "School" },
-];
-
-const MOCK_CAREGIVERS: Caregiver[] = [
-  { id: "c1", name: "Sarah Johnson", role: "Primary" },
-  { id: "c2", name: "Mike Johnson", role: "Caregiver" },
-];
+import { useApp } from "../../lib/store";
 
 const AVATAR_COLORS = [
   "#6366F1",
@@ -47,29 +26,38 @@ const AVATAR_COLORS = [
 export default function ChildDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { state, dispatch } = useApp();
 
-  const [name, setName] = useState("Emma Johnson");
-  const [notes, setNotes] = useState(
-    "Allergic to peanuts. Uses a pink booster seat."
-  );
+  const child = state.children.find((c) => c.id === id);
+  const destinations = state.destinations;
+  const caregivers = state.caregivers;
+
+  const [name, setName] = useState(child?.name ?? "");
+  const [notes, setNotes] = useState(child?.notes ?? "");
   const [active, setActive] = useState(true);
   const [avatarColor, setAvatarColor] = useState("#6366F1");
-  const [destinations] = useState<Destination[]>(MOCK_DESTINATIONS);
-  const [caregivers] = useState<Caregiver[]>(MOCK_CAREGIVERS);
 
   const initial = name.trim() ? name.trim()[0].toUpperCase() : "?";
 
   const handleSave = () => {
-    Alert.alert("Saved", "Child profile updated successfully.");
+    if (!child) return;
+    dispatch({
+      type: "UPDATE_CHILD",
+      payload: { ...child, name, notes },
+    });
+    showAlert("Saved", "Child profile updated successfully.");
   };
 
   const handleRemove = () => {
-    Alert.alert("Remove Child", "Are you sure you want to remove this child?", [
+    showAlert("Remove Child", "Are you sure you want to remove this child?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Remove",
         style: "destructive",
-        onPress: () => router.back(),
+        onPress: () => {
+          if (id) dispatch({ type: "REMOVE_CHILD", payload: id });
+          router.back();
+        },
       },
     ]);
   };
@@ -174,9 +162,9 @@ export default function ChildDetailScreen() {
               <View className="w-2 h-2 rounded-full bg-primary-400 mr-3" />
               <View className="flex-1">
                 <Text className="text-white text-sm font-medium">
-                  {dest.label}
+                  {dest.name}
                 </Text>
-                <Text className="text-dark-400 text-xs">{dest.type}</Text>
+                <Text className="text-dark-400 text-xs">{dest.address}</Text>
               </View>
             </View>
           ))}
@@ -202,7 +190,7 @@ export default function ChildDetailScreen() {
               </Text>
               <View className="bg-primary-500/20 px-2 py-0.5 rounded-full">
                 <Text className="text-primary-400 text-xs font-medium">
-                  {cg.role}
+                  {cg.role.replace('_', ' ')}
                 </Text>
               </View>
             </View>

@@ -5,13 +5,15 @@ import {
   TextInput,
   Pressable,
   ScrollView,
-  Alert,
 } from "react-native";
+import { showAlert } from "../../lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useApp } from "../../lib/store";
 
 export default function AddChildScreen() {
   const router = useRouter();
+  const { state, dispatch } = useApp();
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -19,10 +21,20 @@ export default function AddChildScreen() {
 
   const handleAdd = () => {
     if (!name.trim()) {
-      Alert.alert("Missing Name", "Please enter the child's name.");
+      showAlert("Missing Name", "Please enter the child's name.");
       return;
     }
-    Alert.alert("Success", `${name} has been added.`, [
+    dispatch({
+      type: "ADD_CHILD",
+      payload: {
+        id: Date.now().toString(),
+        familyId: state.auth.family?.id ?? "",
+        name: name.trim(),
+        notes: notes.trim() || undefined,
+        createdAt: new Date().toISOString(),
+      },
+    });
+    showAlert("Success", `${name} has been added.`, [
       { text: "OK", onPress: () => router.back() },
     ]);
   };

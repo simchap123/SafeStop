@@ -5,16 +5,19 @@ import {
   TextInput,
   Pressable,
   ScrollView,
-  Alert,
 } from "react-native";
+import { showAlert } from "../../lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useApp } from "../../lib/store";
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const [name, setName] = useState("Sarah Johnson");
-  const [email] = useState("sarah.johnson@email.com");
-  const [phone, setPhone] = useState("(555) 123-4567");
+  const { state, dispatch } = useApp();
+  const user = state.auth.user;
+  const [name, setName] = useState(user?.displayName ?? "");
+  const [email] = useState(user?.email ?? "");
+  const [phone, setPhone] = useState(user?.phone ?? "");
 
   const initials = name
     .trim()
@@ -26,14 +29,22 @@ export default function ProfileScreen() {
 
   const handleSave = () => {
     if (!name.trim()) {
-      Alert.alert("Missing Name", "Please enter your full name.");
+      showAlert("Missing Name", "Please enter your full name.");
       return;
     }
-    Alert.alert("Saved", "Your profile has been updated.");
+    dispatch({
+      type: "UPDATE_USER",
+      payload: {
+        displayName: name.trim(),
+        phone: phone.trim() || undefined,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+    showAlert("Saved", "Your profile has been updated.");
   };
 
   const handleChangePassword = () => {
-    Alert.alert(
+    showAlert(
       "Change Password",
       "A password reset link will be sent to your email.",
       [
@@ -44,7 +55,7 @@ export default function ProfileScreen() {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
+    showAlert(
       "Delete Account",
       "This will permanently delete your account and all associated data. This action cannot be undone.",
       [

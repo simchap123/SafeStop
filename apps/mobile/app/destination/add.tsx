@@ -5,11 +5,12 @@ import {
   TextInput,
   Pressable,
   ScrollView,
-  Alert,
 } from "react-native";
+import { showAlert } from "../../lib/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import MapView from "../../components/ui/MapView";
+import { useApp } from "../../lib/store";
 
 type DestType = "Daycare" | "School" | "Babysitter" | "Family" | "Custom";
 
@@ -30,10 +31,11 @@ const TYPE_COLORS: Record<DestType, string> = {
 };
 
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
-const CHILDREN = ["Emma", "Liam", "Sophie"];
 
 export default function AddDestinationScreen() {
   const router = useRouter();
+  const { state, dispatch } = useApp();
+  const childNames = state.children.map((c) => c.name);
 
   const [label, setLabel] = useState("");
   const [type, setType] = useState<DestType>("Daycare");
@@ -62,14 +64,28 @@ export default function AddDestinationScreen() {
 
   const handleAdd = () => {
     if (!label.trim()) {
-      Alert.alert("Missing Label", "Please enter a destination name.");
+      showAlert("Missing Label", "Please enter a destination name.");
       return;
     }
     if (!address.trim()) {
-      Alert.alert("Missing Address", "Please enter an address.");
+      showAlert("Missing Address", "Please enter an address.");
       return;
     }
-    Alert.alert("Success", `${label} has been added.`, [
+    dispatch({
+      type: "ADD_DESTINATION",
+      payload: {
+        id: Date.now().toString(),
+        familyId: state.auth.family?.id ?? "",
+        name: label.trim(),
+        address: address.trim(),
+        latitude: 0,
+        longitude: 0,
+        radius,
+        isDefault: false,
+        createdAt: new Date().toISOString(),
+      },
+    });
+    showAlert("Success", `${label} has been added.`, [
       { text: "OK", onPress: () => router.back() },
     ]);
   };
@@ -248,7 +264,7 @@ export default function AddDestinationScreen() {
             Linked Child
           </Text>
           <View className="flex-row flex-wrap gap-2">
-            {CHILDREN.map((child) => (
+            {childNames.map((child) => (
               <Pressable
                 key={child}
                 onPress={() => setLinkedChild(child)}

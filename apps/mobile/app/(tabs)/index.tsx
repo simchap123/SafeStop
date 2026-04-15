@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,43 +8,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
-
-// -- Mock Data --
-const CHILDREN = [
-  {
-    id: "1",
-    name: "Emma",
-    status: "safe" as const,
-    lastConfirmation: "8:42 AM",
-  },
-  {
-    id: "2",
-    name: "Lucas",
-    status: "no-session" as const,
-    lastConfirmation: "Yesterday, 3:15 PM",
-  },
-];
-
-const RECENT_ACTIVITY = [
-  {
-    id: "1",
-    text: "Emma confirmed safe at Sunnyvale Elementary",
-    time: "8:42 AM",
-    type: "confirmed",
-  },
-  {
-    id: "2",
-    text: "Trip started \u2014 Emma, morning drop-off",
-    time: "8:15 AM",
-    type: "started",
-  },
-  {
-    id: "3",
-    text: "Lucas confirmed safe at Soccer Practice",
-    time: "Yesterday 3:15 PM",
-    type: "confirmed",
-  },
-];
+import { useApp } from "../../lib/store";
+import { SessionState } from "../../lib/types";
 
 // -- Status helpers --
 function statusLabel(s: "safe" | "active" | "no-session") {
@@ -80,19 +45,29 @@ function ActivityIcon({ type }: { type: string }) {
   return <Ionicons name="ellipse" size={18} color="#475569" />;
 }
 
+// -- Helpers --
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function isToday(iso: string): boolean {
+  const d = new Date(iso);
+  const now = new Date();
+  return d.toDateString() === now.toDateString();
+}
+
 // -- Main Screen --
 export default function HomeScreen() {
   const router = useRouter();
-  const [activeSession, setActiveSession] = useState<{
-    childName: string;
-    startedAt: number;
-  } | null>(null);
+  const { state } = useApp();
+  const activeSession = state.session;
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
     if (!activeSession) return;
     const interval = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - activeSession.startedAt) / 1000));
+      setElapsed(Math.floor((Date.now() - new Date(activeSession.startedAt).getTime()) / 1000));
     }, 1000);
     return () => clearInterval(interval);
   }, [activeSession]);
@@ -106,6 +81,105 @@ export default function HomeScreen() {
   const handleCheckIn = () => {
     router.push("/(session)/checkin");
   };
+
+  // Derive child display data from store
+  const childCards = useMemo(() => {
+    return state.children.map((child) => {
+      // Check if there's an active session for this child
+      if (activeSession && activeSession.childId === child.id) {
+        return {
+          id: child.id,
+          name: child.name,
+          status: "active" as const,
+          lastConfirmation: formatTime(activeSession.startedAt),
+        };
+      }
+      // Find most recent completed session for this child
+      const lastSession = state.history.find((s) => s.childId === child.id);
+      if (lastSession && lastSession.state === SessionState.CONFIRMED_SAFE) {
+        const endTime = lastSession.endedAt || lastSession.startedAt;
+        const label = isToday(endTime)
+          ? formatTime(endTime)
+          : `${new Date(endTime).toLocaleDateString([], { weekday: "short" })}, ${formatTime(endTime)}`;
+        return {
+          id: child.id,
+          name: child.name,
+          status: "safe" as const,
+          lastConfirmation: label,
+        };
+      }
+      return {
+        id: child.id,
+        name: child.name,
+        status: "no-session" as const,
+        lastConfirmation: "None",
+      };
+    });
+  }, [state.children, state.history, activeSession]);
+
+  // Derive recent activity from session history
+  const recentActivity = useMemo(() => {
+    const items: { id: string; text: string; time: string; type: string }[] = [];
+    for (const session of state.history.slice(0, 5)) {
+      const child = state.children.find((c) => c.id === session.childId);
+      const dest = state.destinations.find((d) => d.id === session.destinationId);
+      const childName = child?.name ?? "Unknown";
+      const destName = dest?.name ?? "Unknown";
+      const endTime = session.endedAt || session.startedAt;
+      const timeLabel = isToday(endTime) ? formatTime(endTime) : `${new Date(endTime).toLocaleDateString([], { weekday: "short" })} ${formatTime(endTime)}`;
+
+      if (session.state === SessionState.CONFIRMED_SAFE) {
+        items.push({
+          id: `${session.id}-end`,
+          text: `${childName} confirmed safe at ${destName}`,
+          time: timeLabel,
+          type: "confirmed",
+        });
+      } else if (session.state === SessionState.ALERT_TRIGGERED) {
+        items.push({
+          id: `${session.id}-alert`,
+          text: `Alert triggered for ${childName} at ${destName}`,
+          time: timeLabel,
+          type: "alert",
+        });
+      }
+
+      const startLabel = isToday(session.startedAt) ? formatTime(session.startedAt) : `${new Date(session.startedAt).toLocaleDateString([], { weekday: "short" })} ${formatTime(session.startedAt)}`;
+      items.push({
+        id: `${session.id}-start`,
+        text: `Trip started \u2014 ${childName}`,
+        time: startLabel,
+        type: "started",
+      });
+    }
+    return items.slice(0, 6);
+  }, [state.history, state.children, state.destinations]);
+
+  // Derive quick stats
+  const todayTrips = state.history.filter((s) => isToday(s.startedAt)).length;
+  const todayConfirmations = state.history.filter(
+    (s) => isToday(s.startedAt) && s.state === SessionState.CONFIRMED_SAFE
+  ).length;
+  const activeAlertCount = state.alerts.filter((a) => !a.resolvedAt).length;
+
+  // User info
+  const userName = state.auth.user?.displayName?.split(" ")[0] ?? "there";
+  const userInitials = state.auth.user?.displayName
+    ? state.auth.user.displayName
+        .split(" ")
+        .map((w) => w[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "??";
+
+  // Active session child name + destination
+  const activeChild = activeSession
+    ? state.children.find((c) => c.id === activeSession.childId)
+    : null;
+  const activeDest = activeSession
+    ? state.destinations.find((d) => d.id === activeSession.destinationId)
+    : null;
 
   const hour = new Date().getHours();
   const greeting =
@@ -137,11 +211,11 @@ export default function HomeScreen() {
               <Text className="text-white text-xl font-bold tracking-tight">SafeStop</Text>
             </View>
             <Text className="text-dark-300 text-base mt-0.5">
-              {greeting}, Sarah
+              {greeting}, {userName}
             </Text>
           </View>
           <View className="w-10 h-10 rounded-full bg-dark-700 items-center justify-center border border-dark-600">
-            <Text className="text-white text-sm font-semibold">SA</Text>
+            <Text className="text-white text-sm font-semibold">{userInitials}</Text>
           </View>
         </View>
 
@@ -150,7 +224,7 @@ export default function HomeScreen() {
           <Text className="text-white text-base font-semibold mb-3">
             Your Children
           </Text>
-          {CHILDREN.map((child) => {
+          {childCards.map((child) => {
             const colors = statusColors(child.status);
             return (
               <View
@@ -253,10 +327,10 @@ export default function HomeScreen() {
                 </View>
               </View>
               <Text className="text-white text-base font-medium">
-                {activeSession.childName} \u2014 Morning drop-off
+                {activeChild?.name ?? "Unknown"} {"\u2014"} Trip in progress
               </Text>
               <Text className="text-dark-400 text-xs mt-1">
-                Sunnyvale Elementary
+                {activeDest?.name ?? "Unknown destination"}
               </Text>
             </View>
           </View>
@@ -265,9 +339,9 @@ export default function HomeScreen() {
         {/* -- Quick Stats -- */}
         <View className="flex-row mx-5 mt-6 gap-3">
           {[
-            { label: "Today's trips", value: "2", icon: "location-outline" as const, color: "#818CF8", accent: "bg-primary-500" },
-            { label: "Confirmations", value: "2", icon: "camera-outline" as const, color: "#22C55E", accent: "bg-safe-500" },
-            { label: "Alerts", value: "0", icon: "alert-circle-outline" as const, color: "#94A3B8", accent: "bg-dark-600" },
+            { label: "Today's trips", value: String(todayTrips), icon: "location-outline" as const, color: "#818CF8", accent: "bg-primary-500" },
+            { label: "Confirmations", value: String(todayConfirmations), icon: "camera-outline" as const, color: "#22C55E", accent: "bg-safe-500" },
+            { label: "Alerts", value: String(activeAlertCount), icon: "alert-circle-outline" as const, color: activeAlertCount > 0 ? "#EF4444" : "#94A3B8", accent: activeAlertCount > 0 ? "bg-danger-500" : "bg-dark-600" },
           ].map((stat) => (
             <View
               key={stat.label}
@@ -299,17 +373,17 @@ export default function HomeScreen() {
           <Text className="text-white text-base font-semibold mb-4">
             Recent Activity
           </Text>
-          {RECENT_ACTIVITY.map((item, idx) => (
+          {recentActivity.map((item, idx) => (
             <View key={item.id} className="flex-row gap-3 min-h-[52px]">
               <View className="items-center mt-0.5">
                 <ActivityIcon type={item.type} />
-                {idx < RECENT_ACTIVITY.length - 1 && (
+                {idx < recentActivity.length - 1 && (
                   <View className="w-0.5 flex-1 bg-dark-700/50 mt-1.5" />
                 )}
               </View>
               <View
                 className={`flex-1 pb-4 ${
-                  idx < RECENT_ACTIVITY.length - 1
+                  idx < recentActivity.length - 1
                     ? "border-b border-dark-700/30 mb-1"
                     : ""
                 }`}

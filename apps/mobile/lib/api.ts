@@ -1,37 +1,33 @@
+import { getItem, setItem, removeItem } from "./storage";
+
 const API_URL = "https://test.shulgenius.com";
+const TOKEN_KEY = "safestop:auth-token";
 
-// Session cookie storage
-let sessionCookie = "";
+// Bearer token storage
+let authToken = "";
 
-export function setSessionCookie(cookie: string) {
-  sessionCookie = cookie;
-}
-
-export function getSessionCookie() {
-  return sessionCookie;
+export function getAuthToken() {
+  return authToken;
 }
 
 async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "Origin": API_URL,
     ...(options.headers as Record<string, string> || {}),
   };
-  if (sessionCookie) {
-    headers["Cookie"] = sessionCookie;
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
   }
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers, credentials: "include" });
-  // Capture session cookies from responses
-  const setCookie = res.headers.get("set-cookie");
-  if (setCookie && setCookie.includes("better-auth.session_token=")) {
-    const cookiePart = setCookie.split(";")[0];
-    sessionCookie = cookiePart;
-    // Also persist to storage
-    try {
-      const { storage } = await import("./storage");
-      await storage.setItem("safestop:session-cookie", cookiePart);
-    } catch {}
-  }
+  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  // Try to capture session token from Set-Cookie header (works on same-origin / native)
+  try {
+    const setCookie = res.headers.get("set-cookie") || "";
+    const match = setCookie.match(/(?:__Secure-)?better-auth\.session_token=([^;]+)/);
+    if (match) {
+      authToken = match[1];
+      await setItem(TOKEN_KEY, match[1]).catch(() => {});
+    }
+  } catch {}
   return res;
 }
 
@@ -45,7 +41,13 @@ export async function signUp(email: string, password: string, name: string) {
     const err = await res.json().catch(() => ({ message: "Signup failed" }));
     throw new Error(err.message || "Signup failed");
   }
-  return res.json();
+  const data = await res.json();
+  // Store the session token
+  if (data.token) {
+    authToken = data.token;
+    await setItem(TOKEN_KEY, data.token).catch(() => {});
+  }
+  return data;
 }
 
 export async function signIn(email: string, password: string) {
@@ -57,16 +59,19 @@ export async function signIn(email: string, password: string) {
     const err = await res.json().catch(() => ({ message: "Invalid credentials" }));
     throw new Error(err.message || "Invalid credentials");
   }
-  return res.json();
+  const data = await res.json();
+  // Store the session token
+  if (data.token) {
+    authToken = data.token;
+    await setItem(TOKEN_KEY, data.token).catch(() => {});
+  }
+  return data;
 }
 
 export async function signOut() {
   await apiFetch("/api/auth/sign-out", { method: "POST" }).catch(() => {});
-  sessionCookie = "";
-  try {
-    const { storage } = await import("./storage");
-    await storage.removeItem("safestop:session-cookie");
-  } catch {}
+  authToken = "";
+  await removeItem(TOKEN_KEY).catch(() => {});
 }
 
 // Families
@@ -82,7 +87,10 @@ export async function createFamily(name: string) {
     method: "POST",
     body: JSON.stringify({ name }),
   });
-  if (!res.ok) throw new Error("Failed to create family");
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: "Failed to create family" }));
+    throw new Error(err.message || "Failed to create family");
+  }
   return res.json();
 }
 
@@ -92,6 +100,24 @@ export async function joinFamily(inviteCode: string) {
     body: JSON.stringify({ inviteCode }),
   });
   if (!res.ok) throw new Error("Failed to join family");
+  return res.json();
+}
+
+export async function updateFamily(id: string, data: { name?: string }) {
+  const res = await apiFetch(`/api/families/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to update family");
+  return res.json();
+}
+
+export async function inviteToFamily(data: { email: string; role: string; familyId: string }) {
+  const res = await apiFetch("/api/families/invite", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to send invite");
   return res.json();
 }
 
@@ -155,26 +181,6 @@ export async function deleteDestination(id: string) {
   if (!res.ok) throw new Error("Failed to delete destination");
 }
 
-// Families - update
-export async function updateFamily(id: string, data: { name?: string }) {
-  const res = await apiFetch(`/api/families/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error("Failed to update family");
-  return res.json();
-}
-
-// Families - invite
-export async function inviteToFamily(data: { email: string; role: string; familyId: string }) {
-  const res = await apiFetch("/api/families/invite", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error("Failed to send invite");
-  return res.json();
-}
-
 // Sessions
 export async function createSession(data: { familyId: string; childIds: string[]; destinationId?: string }) {
   const res = await apiFetch("/api/sessions", {
@@ -232,17 +238,18 @@ export async function registerPushToken(token: string, platform: string) {
   return res.ok;
 }
 
-// Restore session cookie from storage
+// Restore session from stored token
 export async function restoreSession() {
   try {
-    const { storage } = await import("./storage");
-    const cookie = await storage.getItem("safestop:session-cookie");
-    if (cookie) {
-      sessionCookie = cookie;
+    const token = await getItem(TOKEN_KEY);
+    if (token) {
+      authToken = token;
       // Verify session is still valid
       const family = await getFamily();
       return true;
     }
-  } catch {}
+  } catch {
+    authToken = "";
+  }
   return false;
 }

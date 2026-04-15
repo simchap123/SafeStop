@@ -125,8 +125,8 @@ export default function SettingsScreen() {
         style: "destructive",
         onPress: async () => {
           await signOut();
-          dispatch({ type: "LOGOUT" });
-          router.push("/");
+          dispatch({ type: "SIGN_OUT" });
+          router.replace("/");
         },
       },
     ]);

@@ -10,7 +10,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useApp } from "../../lib/store";
-import type { Child, SessionState } from "../../lib/types";
+import { SessionState } from "../../lib/types";
+import type { Child } from "../../lib/types";
 
 const CHILD_COLORS = ["#818CF8", "#22C55E", "#F59E0B", "#EF4444", "#06B6D4"];
 

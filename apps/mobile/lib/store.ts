@@ -6,6 +6,8 @@ import { createDemoData } from './demo-data';
 // ─── Storage Key ───────────────────────────────────────────────────────────
 
 const STORAGE_KEY = 'safestop:app-state';
+const STORAGE_VERSION_KEY = 'safestop:version';
+const CURRENT_VERSION = '2'; // Bump to clear old demo data
 
 // ─── State Shape ───────────────────────────────────────────────────────────
 
@@ -341,12 +343,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const raw = await getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed: AppState = JSON.parse(raw);
-          // Only hydrate if user was authenticated — otherwise start fresh
-          if (parsed.auth?.isAuthenticated || parsed.auth?.isLoggedIn) {
-            dispatch({ type: 'HYDRATE', payload: parsed });
+        // Clear old data if version mismatch
+        const version = await getItem(STORAGE_VERSION_KEY);
+        if (version !== CURRENT_VERSION) {
+          await clearStorage();
+          await setItem(STORAGE_VERSION_KEY, CURRENT_VERSION);
+          // Don't hydrate — start fresh
+        } else {
+          const raw = await getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed: AppState = JSON.parse(raw);
+            if (parsed.auth?.isAuthenticated || parsed.auth?.isLoggedIn) {
+              dispatch({ type: 'HYDRATE', payload: parsed });
+            }
           }
         }
       } catch {

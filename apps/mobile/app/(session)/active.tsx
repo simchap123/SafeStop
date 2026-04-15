@@ -36,7 +36,7 @@ export default function ActiveSessionScreen() {
   }
 
   function handleEndSession() {
-    router.replace("/(session)/checkin");
+    router.push("/(session)/end-session");
   }
 
   return (

@@ -41,7 +41,7 @@ export default function ConfirmedScreen() {
   }
 
   function handleEndSession() {
-    router.replace("/(tabs)");
+    router.push("/(session)/end-session");
   }
 
   return (

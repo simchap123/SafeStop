@@ -2,5 +2,8 @@
   "buildCommand": "cd apps/mobile && npm install && npx expo export --platform web",
   "outputDirectory": "apps/mobile/dist",
   "installCommand": "cd apps/mobile && npm install",
-  "framework": null
+  "framework": null,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }

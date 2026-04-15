@@ -344,17 +344,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const raw = await getItem(STORAGE_KEY);
         if (raw) {
           const parsed: AppState = JSON.parse(raw);
-          dispatch({ type: 'HYDRATE', payload: parsed });
-        } else {
-          // First visit — seed with demo data
-          const demo = createDemoData();
-          dispatch({ type: 'HYDRATE', payload: demo });
-          await setItem(STORAGE_KEY, JSON.stringify(demo));
+          // Only hydrate if user was authenticated — otherwise start fresh
+          if (parsed.auth?.isAuthenticated || parsed.auth?.isLoggedIn) {
+            dispatch({ type: 'HYDRATE', payload: parsed });
+          }
         }
       } catch {
-        // Corrupted storage — fall back to demo data
-        const demo = createDemoData();
-        dispatch({ type: 'HYDRATE', payload: demo });
+        // Corrupted storage — start with clean state
       }
       isHydrated.current = true;
       setHydrated(true);

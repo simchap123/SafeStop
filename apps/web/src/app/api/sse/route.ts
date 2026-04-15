@@ -16,10 +16,7 @@ export async function GET(req: NextRequest) {
 
       // Send initial connection event
       controller.enqueue(
-        encoder.encode(`event: connected
-data: ${JSON.stringify({ userId: session.user.id })}
-
-`)
+        encoder.encode(`event: connected\ndata: ${JSON.stringify({ userId: session.user.id })}\n\n`)
       );
 
       // Register client
@@ -28,9 +25,7 @@ data: ${JSON.stringify({ userId: session.user.id })}
       // Heartbeat every 30 seconds
       const heartbeat = setInterval(() => {
         try {
-          controller.enqueue(encoder.encode(": heartbeat
-
-"));
+          controller.enqueue(encoder.encode(": heartbeat\n\n"));
         } catch {
           clearInterval(heartbeat);
           sseManager.removeClient(clientId);

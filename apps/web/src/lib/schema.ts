@@ -1,5 +1,8 @@
 import { pgTable, text, uuid, timestamp, boolean, integer, jsonb, pgEnum } from "drizzle-orm/pg-core";
 
+// Better Auth manages its own tables: user, session, account, verification
+// Our app tables reference user IDs as text (Better Auth uses text IDs)
+
 export const sessionStatusEnum = pgEnum("session_status", [
   "active", "awaiting_confirmation", "confirmed_safe", "alert_triggered", "ended",
 ]);
@@ -16,64 +19,18 @@ export const caregiverRoleEnum = pgEnum("caregiver_role", [
   "parent", "guardian", "caregiver", "driver",
 ]);
 
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  email: text("email").notNull().unique(),
-  emailVerified: boolean("email_verified").default(false),
-  name: text("name").notNull(),
-  image: text("image"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-export const authSessions = pgTable("auth_sessions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  token: text("token").notNull().unique(),
-  userId: uuid("user_id").notNull().references(() => users.id),
-  expiresAt: timestamp("expires_at").notNull(),
-  ipAddress: text("ip_address"),
-  userAgent: text("user_agent"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-export const accounts = pgTable("accounts", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id),
-  accountId: text("account_id").notNull(),
-  providerId: text("provider_id").notNull(),
-  accessToken: text("access_token"),
-  refreshToken: text("refresh_token"),
-  accessTokenExpiresAt: timestamp("access_token_expires_at"),
-  refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
-  scope: text("scope"),
-  idToken: text("id_token"),
-  password: text("password"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-export const verifications = pgTable("verifications", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  identifier: text("identifier").notNull(),
-  value: text("value").notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
 export const families = pgTable("families", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   inviteCode: text("invite_code").notNull().unique(),
-  createdBy: uuid("created_by").notNull().references(() => users.id),
+  createdBy: text("created_by").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const caregivers = pgTable("caregivers", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id),
+  userId: text("user_id").notNull(),
   familyId: uuid("family_id").notNull().references(() => families.id),
   role: caregiverRoleEnum("role").notNull().default("caregiver"),
   isActive: boolean("is_active").default(true),
@@ -133,7 +90,7 @@ export const alerts = pgTable("alerts", {
   status: alertStatusEnum("status").notNull().default("pending"),
   message: text("message").notNull(),
   resolvedAt: timestamp("resolved_at"),
-  resolvedBy: uuid("resolved_by").references(() => users.id),
+  resolvedBy: text("resolved_by"),
   resolutionNote: text("resolution_note"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -142,7 +99,7 @@ export const alerts = pgTable("alerts", {
 export const photos = pgTable("photos", {
   id: uuid("id").primaryKey().defaultRandom(),
   sessionId: uuid("session_id").notNull().references(() => tripSessions.id),
-  uploadedBy: uuid("uploaded_by").notNull().references(() => users.id),
+  uploadedBy: text("uploaded_by").notNull(),
   url: text("url").notNull(),
   type: text("type").notNull().default("confirmation"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -150,7 +107,7 @@ export const photos = pgTable("photos", {
 
 export const notifications = pgTable("notifications", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id),
+  userId: text("user_id").notNull(),
   title: text("title").notNull(),
   body: text("body").notNull(),
   data: jsonb("data"),
@@ -160,10 +117,9 @@ export const notifications = pgTable("notifications", {
 
 export const pushTokens = pgTable("push_tokens", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id),
+  userId: text("user_id").notNull(),
   token: text("token").notNull().unique(),
   platform: text("platform").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
-

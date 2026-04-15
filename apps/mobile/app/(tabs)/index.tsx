@@ -3,7 +3,7 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -269,19 +269,21 @@ export default function HomeScreen() {
 
         {/* -- Check In Button -- */}
         <View className="px-5 mt-5 mb-2">
-          <TouchableOpacity
+          <Pressable
             onPress={handleCheckIn}
-            activeOpacity={0.8}
             className={`h-16 rounded-2xl flex-row items-center justify-center gap-3 ${
               activeSession ? "bg-danger-500" : "bg-primary-500"
             }`}
-            style={{
-              shadowColor: activeSession ? "#EF4444" : "#6366F1",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.45,
-              shadowRadius: 16,
-              elevation: 12,
-            }}
+            style={({ pressed }) => [
+              {
+                shadowColor: activeSession ? "#EF4444" : "#6366F1",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.45,
+                shadowRadius: 16,
+                elevation: 12,
+              },
+              pressed && { opacity: 0.8 },
+            ]}
           >
             <Ionicons
               name={activeSession ? "checkmark-circle-outline" : "play-circle-outline"}
@@ -296,7 +298,7 @@ export default function HomeScreen() {
                 {activeSession ? "Tap to confirm safe" : "Start a trip session"}
               </Text>
             </View>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* -- Active Session Card -- */}

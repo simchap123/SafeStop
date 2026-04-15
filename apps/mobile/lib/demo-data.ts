@@ -310,6 +310,7 @@ export function createDemoData(): AppState {
   return {
     auth: {
       isLoggedIn: true,
+      isAuthenticated: true,
       user: demoUser,
       family: demoFamily,
     },

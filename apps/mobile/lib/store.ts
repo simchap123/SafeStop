@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react';
 import type { User, Family, Child, Destination, Session, Alert } from './types';
-import { getItem, setItem } from './storage';
+import { getItem, setItem, clear as clearStorage } from './storage';
 import { createDemoData } from './demo-data';
 
 // ─── Storage Key ───────────────────────────────────────────────────────────
@@ -29,6 +29,7 @@ export interface SettingsState {
 
 export interface AuthState {
   isLoggedIn: boolean;
+  isAuthenticated: boolean;
   user: User | null;
   family: Family | null;
 }
@@ -55,7 +56,7 @@ const defaultSettings: SettingsState = {
 };
 
 export const initialState: AppState = {
-  auth: { isLoggedIn: false, user: null, family: null },
+  auth: { isLoggedIn: false, isAuthenticated: false, user: null, family: null },
   children: [],
   destinations: [],
   caregivers: [],
@@ -73,6 +74,8 @@ export type AppAction =
   // Auth
   | { type: 'LOGIN'; payload: { user: User; family: Family } }
   | { type: 'LOGOUT' }
+  | { type: 'SET_AUTH'; payload: { user: User; isAuthenticated: boolean } }
+  | { type: 'SIGN_OUT' }
   | { type: 'UPDATE_USER'; payload: Partial<User> }
   // Children
   | { type: 'SET_CHILDREN'; payload: Child[] }
@@ -103,6 +106,8 @@ export type AppAction =
   | { type: 'DISMISS_ALERT'; payload: string }
   // Settings
   | { type: 'UPDATE_SETTINGS'; payload: Partial<SettingsState> }
+  // API data loading
+  | { type: 'LOAD_API_DATA'; payload: { family?: any; children?: any[]; destinations?: any[]; caregivers?: CaregiverEntry[]; alerts?: any[] } }
   // Reset
   | { type: 'RESET_TO_DEMO' }
   | { type: 'CLEAR_ALL' };
@@ -119,10 +124,24 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'LOGIN':
       return {
         ...state,
-        auth: { isLoggedIn: true, user: action.payload.user, family: action.payload.family },
+        auth: { isLoggedIn: true, isAuthenticated: true, user: action.payload.user, family: action.payload.family },
       };
     case 'LOGOUT':
       return { ...initialState };
+    case 'SET_AUTH':
+      return {
+        ...state,
+        auth: {
+          ...state.auth,
+          user: action.payload.user,
+          isLoggedIn: action.payload.isAuthenticated,
+          isAuthenticated: action.payload.isAuthenticated,
+        },
+      };
+    case 'SIGN_OUT': {
+      clearStorage().catch(() => {});
+      return { ...initialState };
+    }
     case 'UPDATE_USER':
       return {
         ...state,
@@ -218,6 +237,73 @@ function appReducer(state: AppState, action: AppAction): AppState {
     // Settings
     case 'UPDATE_SETTINGS':
       return { ...state, settings: { ...state.settings, ...action.payload } };
+
+    // API data loading
+    case 'LOAD_API_DATA': {
+      const { family, children, destinations, caregivers, alerts } = action.payload;
+
+      // Map API family to store Family type
+      const mappedFamily: Family | null = family
+        ? {
+            id: family.id,
+            name: family.name,
+            ownerId: family.createdBy ?? '',
+            members: [],
+            children: [],
+            destinations: [],
+            createdAt: family.createdAt ?? '',
+          }
+        : state.auth.family;
+
+      // Map API children (age) to store Child type (dateOfBirth)
+      const mappedChildren: Child[] = (children ?? []).map((c: any) => ({
+        id: c.id,
+        familyId: c.familyId,
+        name: c.name,
+        dateOfBirth: '', // API provides age, not dateOfBirth
+        avatarUrl: c.photoUrl ?? c.avatarUrl,
+        notes: c.notes,
+        createdAt: c.createdAt ?? '',
+      }));
+
+      // Map API destinations (flat lat/lng/radius) to store Destination type
+      const mappedDestinations: Destination[] = (destinations ?? []).map((d: any) => ({
+        id: d.id,
+        familyId: d.familyId,
+        name: d.name,
+        address: d.address ?? '',
+        latitude: Number(d.latitude) || 0,
+        longitude: Number(d.longitude) || 0,
+        radius: Number(d.radius) || 100,
+        isDefault: d.isDefault ?? false,
+        createdAt: d.createdAt ?? '',
+      }));
+
+      // Map API alerts
+      const mappedAlerts: Alert[] = (alerts ?? []).map((a: any) => ({
+        id: a.id,
+        sessionId: a.sessionId ?? '',
+        familyId: a.familyId ?? '',
+        childId: a.childId ?? '',
+        severity: a.severity ?? 'medium',
+        message: a.message ?? '',
+        triggeredAt: a.triggeredAt ?? a.createdAt ?? '',
+        resolvedAt: a.resolvedAt,
+        resolvedBy: a.resolvedBy,
+      }));
+
+      return {
+        ...state,
+        auth: {
+          ...state.auth,
+          family: mappedFamily,
+        },
+        children: mappedChildren,
+        destinations: mappedDestinations,
+        caregivers: caregivers ?? state.caregivers,
+        alerts: mappedAlerts,
+      };
+    }
 
     // Reset
     case 'RESET_TO_DEMO':

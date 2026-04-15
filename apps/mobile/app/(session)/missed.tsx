@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, Animated } from "react-native";
+import { View, Text, Pressable, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -119,24 +119,28 @@ export default function MissedConfirmationScreen() {
 
       {/* Bottom actions */}
       <View className="px-4 pb-6 gap-4">
-        <TouchableOpacity
+        <Pressable
           onPress={handleConfirmNow}
           className="bg-danger-500 h-14 rounded-xl items-center justify-center flex-row gap-2"
-          activeOpacity={0.8}
+          style={({ pressed }) => [
+            pressed && { opacity: 0.8 },
+          ]}
         >
           <Ionicons name="checkmark-circle-outline" size={22} color="#FFFFFF" />
           <Text className="text-white font-bold text-lg">Confirm Now</Text>
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity
+        <Pressable
           onPress={handleFalseAlarm}
           className="h-12 items-center justify-center"
-          activeOpacity={0.6}
+          style={({ pressed }) => [
+            pressed && { opacity: 0.6 },
+          ]}
         >
           <Text className="text-dark-400 text-base">
             This was a false alarm
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </SafeAreaView>
   );

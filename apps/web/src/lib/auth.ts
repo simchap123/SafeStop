@@ -1,20 +1,12 @@
 import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "./db";
-import * as schema from "./schema";
+import { Pool } from "pg";
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL!,
+});
 
 export const auth = betterAuth({
-  database: drizzleAdapter(db, {
-    provider: "pg",
-    usePlural: true,
-    schema: {
-      ...schema,
-      user: schema.users,
-      session: schema.authSessions,
-      account: schema.accounts,
-      verification: schema.verifications,
-    },
-  }),
+  database: pool,
   emailAndPassword: {
     enabled: true,
   },
@@ -23,4 +15,14 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24, // 1 day
   },
   secret: process.env.BETTER_AUTH_SECRET,
+  baseURL: process.env.BETTER_AUTH_URL,
+  trustedOrigins: [
+    "http://68.183.20.8",
+    "http://68.183.20.8:3000",
+    "https://test.shulgenius.com",
+    "http://localhost:3000",
+    "http://localhost:8081",
+    "http://localhost:19006",
+    "https://safestop-app-kappa.vercel.app",
+  ],
 });

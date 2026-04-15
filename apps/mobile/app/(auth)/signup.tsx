@@ -5,8 +5,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import ShieldLogo from "../../components/ui/ShieldLogo";
+import { signUp } from "../../lib/api";
+import { loadUserData } from "../../lib/load-data";
+import { showAlert } from "../../lib/alert";
+import { useApp } from "../../lib/store";
 
 export default function SignUpScreen() {
+  const { dispatch } = useApp();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,14 +34,31 @@ export default function SignUpScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     if (!validate()) return;
-    setLoading(true);
-    // Simulate account creation
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      setLoading(true);
+      const result = await signUp(email, password, fullName);
+      dispatch({
+        type: "LOGIN",
+        payload: {
+          user: {
+            id: result.user.id,
+            displayName: result.user.name,
+            email: result.user.email,
+            createdAt: result.user.createdAt ?? new Date().toISOString(),
+            updatedAt: result.user.updatedAt ?? new Date().toISOString(),
+          },
+          family: null as any,
+        },
+      });
+      await loadUserData(dispatch);
       router.replace("/(auth)/onboarding");
-    }, 1500);
+    } catch (err: any) {
+      showAlert("Signup Failed", err.message || "Could not create account");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

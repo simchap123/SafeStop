@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   ScrollView,
   TextInput,
 } from "react-native";
@@ -23,7 +23,7 @@ function getChildColor(index: number): string {
   return CHILD_COLORS[index % CHILD_COLORS.length];
 }
 
-function ChildCard({
+const ChildCard = React.memo(function ChildCard({
   child,
   index,
   selected,
@@ -35,13 +35,15 @@ function ChildCard({
   onToggle: () => void;
 }) {
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onToggle}
       className={`flex-row items-center p-4 rounded-2xl mb-3 ${
         selected ? "bg-safe-500/15 border-2 border-safe-500" : "bg-dark-800 border-2 border-dark-700"
       }`}
-      activeOpacity={0.7}
-      style={{ minHeight: 48 }}
+      style={({ pressed }) => [
+        { minHeight: 48 },
+        pressed && { opacity: 0.7 },
+      ]}
     >
       {/* Avatar */}
       <View
@@ -69,9 +71,9 @@ function ChildCard({
       >
         {selected && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
-}
+});
 
 export default function CheckInScreen() {
   const router = useRouter();
@@ -118,14 +120,17 @@ export default function CheckInScreen() {
       <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Header */}
         <View className="mt-4 mb-2">
-          <TouchableOpacity
+          <Pressable
             onPress={() => router.back()}
             className="mb-4 flex-row items-center gap-1"
-            style={{ minHeight: 48 }}
+            style={({ pressed }) => [
+              { minHeight: 48 },
+              pressed && { opacity: 0.7 },
+            ]}
           >
             <Ionicons name="chevron-back" size={20} color="#94A3B8" />
             <Text className="text-dark-400 text-base">Back</Text>
-          </TouchableOpacity>
+          </Pressable>
           <Text className="text-white text-3xl font-bold mb-1">Check In</Text>
           <Text className="text-dark-400 text-base">
             Start a safety session before you drive.
@@ -179,12 +184,14 @@ export default function CheckInScreen() {
         </View>
 
         {/* Start Session Button */}
-        <TouchableOpacity
+        <Pressable
           onPress={handleStart}
           className={`mt-10 h-14 rounded-xl items-center justify-center flex-row gap-2 ${
             selectedIds.length > 0 ? "bg-safe-500" : "bg-dark-700"
           }`}
-          activeOpacity={0.8}
+          style={({ pressed }) => [
+            pressed && { opacity: 0.8 },
+          ]}
           disabled={selectedIds.length === 0}
         >
           <Ionicons
@@ -199,19 +206,21 @@ export default function CheckInScreen() {
           >
             Start Session
           </Text>
-        </TouchableOpacity>
+        </Pressable>
 
         {/* No child link */}
-        <TouchableOpacity
+        <Pressable
           onPress={() => router.back()}
           className="mt-6 items-center py-3"
-          activeOpacity={0.6}
-          style={{ minHeight: 48 }}
+          style={({ pressed }) => [
+            { minHeight: 48 },
+            pressed && { opacity: 0.6 },
+          ]}
         >
           <Text className="text-dark-400 text-base underline">
             No Child With Me Today
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );

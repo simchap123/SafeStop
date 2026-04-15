@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, Animated } from "react-native";
+import { View, Text, Pressable, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -91,25 +91,29 @@ export default function ConfirmedScreen() {
 
       {/* Bottom Buttons */}
       <View className="px-4 pb-6 gap-3">
-        <TouchableOpacity
+        <Pressable
           onPress={handleContinueSession}
           className="bg-primary-500 h-14 rounded-xl items-center justify-center"
-          activeOpacity={0.8}
+          style={({ pressed }) => [
+            pressed && { opacity: 0.8 },
+          ]}
         >
           <Text className="text-white font-bold text-base">
             Continue Session
           </Text>
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity
+        <Pressable
           onPress={handleEndSession}
           className="border-2 border-dark-600 h-14 rounded-xl items-center justify-center"
-          activeOpacity={0.7}
+          style={({ pressed }) => [
+            pressed && { opacity: 0.7 },
+          ]}
         >
           <Text className="text-dark-300 font-semibold text-base">
             End Session
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </SafeAreaView>
   );

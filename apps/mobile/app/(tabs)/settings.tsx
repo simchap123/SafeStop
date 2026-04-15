@@ -7,6 +7,7 @@ import {
   Switch,
 } from "react-native";
 import { showAlert } from "../../lib/alert";
+import { signOut } from "../../lib/api";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -122,7 +123,8 @@ export default function SettingsScreen() {
       {
         text: "Sign Out",
         style: "destructive",
-        onPress: () => {
+        onPress: async () => {
+          await signOut();
           dispatch({ type: "LOGOUT" });
           router.push("/");
         },

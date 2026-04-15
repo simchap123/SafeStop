@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, FlatList, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useApp } from "../../lib/store";
@@ -63,6 +63,11 @@ export default function AlertsScreen() {
     return state.children.find((c) => c.id === childId)?.name ?? "Unknown";
   };
 
+  const flatListData = React.useMemo(() => [
+    ...activeAlerts.map((a) => ({ ...a, _resolved: false as const })),
+    ...resolvedAlerts.map((a) => ({ ...a, _resolved: true as const })),
+  ], [activeAlerts, resolvedAlerts]);
+
   return (
     <SafeAreaView className="flex-1 bg-dark-900">
       {/* Header */}
@@ -73,85 +78,50 @@ export default function AlertsScreen() {
         </Text>
       </View>
 
-      <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
-        {/* -- Active Alerts -- */}
-        {activeAlerts.length > 0 && (
-          <View className="mt-4">
-            <Text className="text-danger-500 text-xs font-semibold uppercase tracking-wider mb-3">
-              Active Alerts
-            </Text>
-            {activeAlerts.map((alert) => {
-              const displaySeverity = severityToDisplay(alert.severity);
-              const style = severityStyle(displaySeverity, false);
-              return (
-                <View
-                  key={alert.id}
-                  className={`${style.bg} border ${style.border} rounded-2xl p-4 mb-3`}
-                >
-                  <View className="flex-row items-start justify-between mb-2">
-                    <View className="flex-row items-center gap-2 flex-1">
-                      {severityIcon(displaySeverity, false)}
-                      <View className="flex-1">
-                        <Text className="text-white text-base font-semibold">
-                          {alert.message}
-                        </Text>
-                        <Text className="text-dark-300 text-sm mt-0.5">
-                          {getChildName(alert.childId)} {"\u2014"} {formatAlertTime(alert.triggeredAt)}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                  <View className="flex-row gap-2 mt-2">
-                    <TouchableOpacity
-                      onPress={() => resolveAlert(alert.id)}
-                      activeOpacity={0.8}
-                      className="flex-1 bg-white/10 rounded-xl h-14 items-center justify-center"
-                    >
-                      <Text className="text-white text-sm font-semibold">
-                        Resolve
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => dismissAlert(alert.id)}
-                      activeOpacity={0.8}
-                      className="bg-white/5 rounded-xl h-14 px-4 items-center justify-center"
-                    >
-                      <Ionicons name="close" size={18} color="#94A3B8" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        )}
-
-        {/* -- Empty Active State -- */}
-        {activeAlerts.length === 0 && (
-          <View className="items-center justify-center py-16 mt-4">
-            <View className="w-20 h-20 rounded-full bg-safe-500/15 items-center justify-center mb-4">
-              <Ionicons name="shield-checkmark" size={40} color="#22C55E" />
+      <FlatList
+        className="flex-1 px-4"
+        showsVerticalScrollIndicator={false}
+        data={flatListData}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={
+          activeAlerts.length > 0 ? (
+            <View className="mt-4">
+              <Text className="text-danger-500 text-xs font-semibold uppercase tracking-wider mb-3">
+                Active Alerts
+              </Text>
             </View>
-            <Text className="text-white text-lg font-semibold mb-1">
-              No Active Alerts
-            </Text>
-            <Text className="text-dark-400 text-sm text-center px-8">
-              All clear! Your children are safe and all alerts have been resolved.
-            </Text>
-          </View>
-        )}
+          ) : (
+            <View className="items-center justify-center py-16 mt-4">
+              <View className="w-20 h-20 rounded-full bg-safe-500/15 items-center justify-center mb-4">
+                <Ionicons name="shield-checkmark" size={40} color="#22C55E" />
+              </View>
+              <Text className="text-white text-lg font-semibold mb-1">
+                No Active Alerts
+              </Text>
+              <Text className="text-dark-400 text-sm text-center px-8">
+                All clear! Your children are safe and all alerts have been resolved.
+              </Text>
+            </View>
+          )
+        }
+        ListFooterComponent={<View className="h-8" />}
+        renderItem={({ item: alert, index }) => {
+          // Show resolved section header before first resolved alert
+          const showResolvedHeader = alert._resolved && index === activeAlerts.length;
 
-        {/* -- Resolved Alerts -- */}
-        {resolvedAlerts.length > 0 && (
-          <View className="mt-6">
-            <Text className="text-dark-400 text-xs font-semibold uppercase tracking-wider mb-3">
-              Resolved
-            </Text>
-            {resolvedAlerts.map((alert) => {
-              const displaySeverity = severityToDisplay(alert.severity);
-              const style = severityStyle(displaySeverity, true);
-              return (
+          if (alert._resolved) {
+            const displaySeverity = severityToDisplay(alert.severity);
+            const style = severityStyle(displaySeverity, true);
+            return (
+              <>
+                {showResolvedHeader && (
+                  <View className="mt-6">
+                    <Text className="text-dark-400 text-xs font-semibold uppercase tracking-wider mb-3">
+                      Resolved
+                    </Text>
+                  </View>
+                )}
                 <View
-                  key={alert.id}
                   className={`${style.bg} border ${style.border} rounded-2xl p-4 mb-3`}
                   style={{ opacity: 0.6 }}
                 >
@@ -171,13 +141,55 @@ export default function AlertsScreen() {
                     </Text>
                   </View>
                 </View>
-              );
-            })}
-          </View>
-        )}
+              </>
+            );
+          }
 
-        <View className="h-8" />
-      </ScrollView>
+          const displaySeverity = severityToDisplay(alert.severity);
+          const style = severityStyle(displaySeverity, false);
+          return (
+            <View
+              className={`${style.bg} border ${style.border} rounded-2xl p-4 mb-3`}
+            >
+              <View className="flex-row items-start justify-between mb-2">
+                <View className="flex-row items-center gap-2 flex-1">
+                  {severityIcon(displaySeverity, false)}
+                  <View className="flex-1">
+                    <Text className="text-white text-base font-semibold">
+                      {alert.message}
+                    </Text>
+                    <Text className="text-dark-300 text-sm mt-0.5">
+                      {getChildName(alert.childId)} {"\u2014"} {formatAlertTime(alert.triggeredAt)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+              <View className="flex-row gap-2 mt-2">
+                <Pressable
+                  onPress={() => resolveAlert(alert.id)}
+                  className="flex-1 bg-white/10 rounded-xl h-14 items-center justify-center"
+                  style={({ pressed }) => [
+                    pressed && { opacity: 0.8 },
+                  ]}
+                >
+                  <Text className="text-white text-sm font-semibold">
+                    Resolve
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => dismissAlert(alert.id)}
+                  className="bg-white/5 rounded-xl h-14 px-4 items-center justify-center"
+                  style={({ pressed }) => [
+                    pressed && { opacity: 0.8 },
+                  ]}
+                >
+                  <Ionicons name="close" size={18} color="#94A3B8" />
+                </Pressable>
+              </View>
+            </View>
+          );
+        }}
+      />
     </SafeAreaView>
   );
 }

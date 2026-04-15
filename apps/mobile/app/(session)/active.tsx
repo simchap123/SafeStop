@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -94,30 +94,34 @@ export default function ActiveSessionScreen() {
         </View>
 
         {/* Simulate stop button (for demo) */}
-        <TouchableOpacity
+        <Pressable
           onPress={handleSimulateStop}
           className="mt-4 bg-warning-500/15 border border-warning-500/30 h-14 rounded-xl items-center justify-center flex-row gap-2"
-          activeOpacity={0.7}
+          style={({ pressed }) => [
+            pressed && { opacity: 0.7 },
+          ]}
         >
           <Ionicons name="pause-circle-outline" size={20} color="#F59E0B" />
           <Text className="text-warning-500 font-medium text-sm">
             Simulate Stop Detection (Demo)
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       {/* End Session */}
       <View className="px-4 pb-6">
-        <TouchableOpacity
+        <Pressable
           onPress={handleEndSession}
           className="h-14 rounded-xl items-center justify-center border-2 border-dark-600 flex-row gap-2"
-          activeOpacity={0.7}
+          style={({ pressed }) => [
+            pressed && { opacity: 0.7 },
+          ]}
         >
           <Ionicons name="stop-circle-outline" size={20} color="#CBD5E1" />
           <Text className="text-dark-300 font-semibold text-base">
             End Session
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </SafeAreaView>
   );

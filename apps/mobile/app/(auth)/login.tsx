@@ -5,8 +5,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import ShieldLogo from "../../components/ui/ShieldLogo";
+import { signIn } from "../../lib/api";
+import { loadUserData } from "../../lib/load-data";
+import { showAlert } from "../../lib/alert";
+import { useApp } from "../../lib/store";
 
 export default function LoginScreen() {
+  const { dispatch } = useApp();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,14 +27,31 @@ export default function LoginScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
     if (!validate()) return;
-    setLoading(true);
-    // Simulate sign-in
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      setLoading(true);
+      const result = await signIn(email, password);
+      dispatch({
+        type: "LOGIN",
+        payload: {
+          user: {
+            id: result.user.id,
+            displayName: result.user.name,
+            email: result.user.email,
+            createdAt: result.user.createdAt ?? new Date().toISOString(),
+            updatedAt: result.user.updatedAt ?? new Date().toISOString(),
+          },
+          family: null as any,
+        },
+      });
+      await loadUserData(dispatch);
       router.replace("/(tabs)");
-    }, 1500);
+    } catch (err: any) {
+      showAlert("Login Failed", err.message || "Invalid email or password");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

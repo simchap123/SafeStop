@@ -1,472 +1,169 @@
-import {
-  pgTable,
-  pgEnum,
-  uuid,
-  text,
-  timestamp,
-  real,
-  integer,
-  boolean,
-  jsonb,
-  index,
-} from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { pgTable, text, uuid, timestamp, boolean, integer, jsonb, pgEnum } from "drizzle-orm/pg-core";
 
-// ─── Enums ──────────────────────────────────────────────────────────────────
-
-export const sessionStateEnum = pgEnum('session_state', [
-  'idle',
-  'driving',
-  'stop_detected',
-  'awaiting_confirmation',
-  'confirmed_safe',
-  'alert_triggered',
-  'escalated',
+export const sessionStatusEnum = pgEnum("session_status", [
+  "active", "awaiting_confirmation", "confirmed_safe", "alert_triggered", "ended",
 ]);
 
-export const confirmationTypeEnum = pgEnum('confirmation_type', [
-  'photo',
-  'manual',
-  'auto',
-  'co_parent',
+export const alertSeverityEnum = pgEnum("alert_severity", [
+  "low", "medium", "high", "critical",
 ]);
 
-export const alertSeverityEnum = pgEnum('alert_severity', [
-  'low',
-  'medium',
-  'high',
-  'critical',
+export const alertStatusEnum = pgEnum("alert_status", [
+  "pending", "acknowledged", "resolved", "escalated",
 ]);
 
-export const subscriptionTierEnum = pgEnum('subscription_tier', [
-  'free',
-  'basic',
-  'premium',
+export const caregiverRoleEnum = pgEnum("caregiver_role", [
+  "parent", "guardian", "caregiver", "driver",
 ]);
 
-export const familyRoleEnum = pgEnum('family_role', [
-  'owner',
-  'admin',
-  'member',
-]);
-
-export const platformEnum = pgEnum('platform', ['ios', 'android', 'web']);
-
-export const notificationTypeEnum = pgEnum('notification_type', [
-  'stop_detected',
-  'confirmation_needed',
-  'alert',
-  'escalation',
-  'session_started',
-  'session_ended',
-]);
-
-// ─── Tables ─────────────────────────────────────────────────────────────────
-
-export const users = pgTable(
-  'users',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    email: text('email').notNull().unique(),
-    displayName: text('display_name').notNull(),
-    avatarUrl: text('avatar_url'),
-    phone: text('phone'),
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (t) => [index('users_email_idx').on(t.email)],
-);
-
-export const families = pgTable('families', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
-  ownerId: uuid('owner_id')
-    .notNull()
-    .references(() => users.id),
-  inviteCode: text('invite_code').unique(),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+export const users = pgTable("users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull().unique(),
+  emailVerified: boolean("email_verified").default(false),
+  name: text("name").notNull(),
+  image: text("image"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const familyMembers = pgTable(
-  'family_members',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id),
-    familyId: uuid('family_id')
-      .notNull()
-      .references(() => families.id),
-    role: familyRoleEnum('role').notNull().default('member'),
-    displayName: text('display_name').notNull(),
-    email: text('email').notNull(),
-    avatarUrl: text('avatar_url'),
-    joinedAt: timestamp('joined_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (t) => [
-    index('family_members_user_idx').on(t.userId),
-    index('family_members_family_idx').on(t.familyId),
-  ],
-);
+export const authSessions = pgTable("auth_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  token: text("token").notNull().unique(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  expiresAt: timestamp("expires_at").notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 
-export const children = pgTable(
-  'children',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    familyId: uuid('family_id')
-      .notNull()
-      .references(() => families.id),
-    name: text('name').notNull(),
-    dateOfBirth: text('date_of_birth'),
-    avatarUrl: text('avatar_url'),
-    notes: text('notes'),
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (t) => [index('children_family_idx').on(t.familyId)],
-);
+export const accounts = pgTable("accounts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  accountId: text("account_id").notNull(),
+  providerId: text("provider_id").notNull(),
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  accessTokenExpiresAt: timestamp("access_token_expires_at"),
+  refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+  scope: text("scope"),
+  idToken: text("id_token"),
+  password: text("password"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 
-export const destinations = pgTable(
-  'destinations',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    familyId: uuid('family_id')
-      .notNull()
-      .references(() => families.id),
-    name: text('name').notNull(),
-    address: text('address').notNull(),
-    latitude: real('latitude').notNull(),
-    longitude: real('longitude').notNull(),
-    radius: integer('radius').notNull().default(100),
-    isDefault: boolean('is_default').notNull().default(false),
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (t) => [index('destinations_family_idx').on(t.familyId)],
-);
+export const verifications = pgTable("verifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  identifier: text("identifier").notNull(),
+  value: text("value").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 
-export const sessions = pgTable(
-  'sessions',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    familyId: uuid('family_id')
-      .notNull()
-      .references(() => families.id),
-    driverId: uuid('driver_id')
-      .notNull()
-      .references(() => users.id),
-    childId: uuid('child_id')
-      .notNull()
-      .references(() => children.id),
-    destinationId: uuid('destination_id').references(() => destinations.id),
-    state: sessionStateEnum('state').notNull().default('idle'),
-    startedAt: timestamp('started_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    endedAt: timestamp('ended_at', { withTimezone: true }),
-  },
-  (t) => [
-    index('sessions_family_idx').on(t.familyId),
-    index('sessions_driver_idx').on(t.driverId),
-    index('sessions_child_idx').on(t.childId),
-    index('sessions_state_idx').on(t.state),
-  ],
-);
+export const families = pgTable("families", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  inviteCode: text("invite_code").notNull().unique(),
+  createdBy: uuid("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 
-export const stops = pgTable(
-  'stops',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    sessionId: uuid('session_id')
-      .notNull()
-      .references(() => sessions.id),
-    latitude: real('latitude').notNull(),
-    longitude: real('longitude').notNull(),
-    detectedAt: timestamp('detected_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    destinationId: uuid('destination_id').references(() => destinations.id),
-  },
-  (t) => [index('stops_session_idx').on(t.sessionId)],
-);
+export const caregivers = pgTable("caregivers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  familyId: uuid("family_id").notNull().references(() => families.id),
+  role: caregiverRoleEnum("role").notNull().default("caregiver"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 
-export const confirmations = pgTable(
-  'confirmations',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    stopId: uuid('stop_id')
-      .notNull()
-      .references(() => stops.id),
-    type: confirmationTypeEnum('type').notNull(),
-    confirmedBy: uuid('confirmed_by')
-      .notNull()
-      .references(() => users.id),
-    confirmedAt: timestamp('confirmed_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (t) => [index('confirmations_stop_idx').on(t.stopId)],
-);
+export const children = pgTable("children", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  familyId: uuid("family_id").notNull().references(() => families.id),
+  name: text("name").notNull(),
+  age: integer("age"),
+  photoUrl: text("photo_url"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 
-export const photos = pgTable(
-  'photos',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    confirmationId: uuid('confirmation_id')
-      .notNull()
-      .references(() => confirmations.id),
-    uri: text('uri').notNull(),
-    takenAt: timestamp('taken_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (t) => [index('photos_confirmation_idx').on(t.confirmationId)],
-);
+export const destinations = pgTable("destinations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  familyId: uuid("family_id").notNull().references(() => families.id),
+  name: text("name").notNull(),
+  address: text("address"),
+  latitude: text("latitude"),
+  longitude: text("longitude"),
+  radius: integer("radius").default(100),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 
-export const alerts = pgTable(
-  'alerts',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    sessionId: uuid('session_id')
-      .notNull()
-      .references(() => sessions.id),
-    familyId: uuid('family_id')
-      .notNull()
-      .references(() => families.id),
-    childId: uuid('child_id')
-      .notNull()
-      .references(() => children.id),
-    severity: alertSeverityEnum('severity').notNull(),
-    message: text('message').notNull(),
-    triggeredAt: timestamp('triggered_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
-    resolvedBy: uuid('resolved_by').references(() => users.id),
-  },
-  (t) => [
-    index('alerts_session_idx').on(t.sessionId),
-    index('alerts_family_idx').on(t.familyId),
-    index('alerts_severity_idx').on(t.severity),
-  ],
-);
+export const tripSessions = pgTable("trip_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  familyId: uuid("family_id").notNull().references(() => families.id),
+  caregiverId: uuid("caregiver_id").notNull().references(() => caregivers.id),
+  destinationId: uuid("destination_id").references(() => destinations.id),
+  status: sessionStatusEnum("status").notNull().default("active"),
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  endedAt: timestamp("ended_at"),
+  stopDetectedAt: timestamp("stop_detected_at"),
+  confirmedAt: timestamp("confirmed_at"),
+  confirmationPhotoUrl: text("confirmation_photo_url"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 
-export const notifications = pgTable(
-  'notifications',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id),
-    type: notificationTypeEnum('type').notNull(),
-    title: text('title').notNull(),
-    body: text('body').notNull(),
-    data: jsonb('data'),
-    read: boolean('read').notNull().default(false),
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (t) => [
-    index('notifications_user_idx').on(t.userId),
-    index('notifications_read_idx').on(t.read),
-  ],
-);
+export const sessionChildren = pgTable("session_children", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: uuid("session_id").notNull().references(() => tripSessions.id),
+  childId: uuid("child_id").notNull().references(() => children.id),
+});
 
-export const subscriptions = pgTable(
-  'subscriptions',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    familyId: uuid('family_id')
-      .notNull()
-      .references(() => families.id),
-    tier: subscriptionTierEnum('tier').notNull().default('free'),
-    maxChildren: integer('max_children').notNull().default(2),
-    maxDestinations: integer('max_destinations').notNull().default(3),
-    isActive: boolean('is_active').notNull().default(true),
-    expiresAt: timestamp('expires_at', { withTimezone: true }),
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (t) => [index('subscriptions_family_idx').on(t.familyId)],
-);
+export const alerts = pgTable("alerts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: uuid("session_id").notNull().references(() => tripSessions.id),
+  severity: alertSeverityEnum("severity").notNull().default("medium"),
+  status: alertStatusEnum("status").notNull().default("pending"),
+  message: text("message").notNull(),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: uuid("resolved_by").references(() => users.id),
+  resolutionNote: text("resolution_note"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 
-export const pushTokens = pgTable(
-  'push_tokens',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id),
-    token: text('token').notNull(),
-    platform: platformEnum('platform').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (t) => [
-    index('push_tokens_user_idx').on(t.userId),
-    index('push_tokens_token_idx').on(t.token),
-  ],
-);
+export const photos = pgTable("photos", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: uuid("session_id").notNull().references(() => tripSessions.id),
+  uploadedBy: uuid("uploaded_by").notNull().references(() => users.id),
+  url: text("url").notNull(),
+  type: text("type").notNull().default("confirmation"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 
-// ─── Relations ──────────────────────────────────────────────────────────────
+export const notifications = pgTable("notifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  data: jsonb("data"),
+  read: boolean("read").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 
-export const usersRelations = relations(users, ({ many }) => ({
-  familyMembers: many(familyMembers),
-  sessions: many(sessions),
-  confirmations: many(confirmations),
-  notifications: many(notifications),
-  pushTokens: many(pushTokens),
-}));
+export const pushTokens = pgTable("push_tokens", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  token: text("token").notNull().unique(),
+  platform: text("platform").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 
-export const familiesRelations = relations(families, ({ one, many }) => ({
-  owner: one(users, {
-    fields: [families.ownerId],
-    references: [users.id],
-  }),
-  members: many(familyMembers),
-  children: many(children),
-  destinations: many(destinations),
-  sessions: many(sessions),
-  alerts: many(alerts),
-  subscriptions: many(subscriptions),
-}));
-
-export const familyMembersRelations = relations(familyMembers, ({ one }) => ({
-  user: one(users, {
-    fields: [familyMembers.userId],
-    references: [users.id],
-  }),
-  family: one(families, {
-    fields: [familyMembers.familyId],
-    references: [families.id],
-  }),
-}));
-
-export const childrenRelations = relations(children, ({ one, many }) => ({
-  family: one(families, {
-    fields: [children.familyId],
-    references: [families.id],
-  }),
-  sessions: many(sessions),
-  alerts: many(alerts),
-}));
-
-export const destinationsRelations = relations(
-  destinations,
-  ({ one, many }) => ({
-    family: one(families, {
-      fields: [destinations.familyId],
-      references: [families.id],
-    }),
-    sessions: many(sessions),
-    stops: many(stops),
-  }),
-);
-
-export const sessionsRelations = relations(sessions, ({ one, many }) => ({
-  family: one(families, {
-    fields: [sessions.familyId],
-    references: [families.id],
-  }),
-  driver: one(users, {
-    fields: [sessions.driverId],
-    references: [users.id],
-  }),
-  child: one(children, {
-    fields: [sessions.childId],
-    references: [children.id],
-  }),
-  destination: one(destinations, {
-    fields: [sessions.destinationId],
-    references: [destinations.id],
-  }),
-  stops: many(stops),
-  alerts: many(alerts),
-}));
-
-export const stopsRelations = relations(stops, ({ one, many }) => ({
-  session: one(sessions, {
-    fields: [stops.sessionId],
-    references: [sessions.id],
-  }),
-  destination: one(destinations, {
-    fields: [stops.destinationId],
-    references: [destinations.id],
-  }),
-  confirmations: many(confirmations),
-}));
-
-export const confirmationsRelations = relations(
-  confirmations,
-  ({ one, many }) => ({
-    stop: one(stops, {
-      fields: [confirmations.stopId],
-      references: [stops.id],
-    }),
-    confirmer: one(users, {
-      fields: [confirmations.confirmedBy],
-      references: [users.id],
-    }),
-    photos: many(photos),
-  }),
-);
-
-export const photosRelations = relations(photos, ({ one }) => ({
-  confirmation: one(confirmations, {
-    fields: [photos.confirmationId],
-    references: [confirmations.id],
-  }),
-}));
-
-export const alertsRelations = relations(alerts, ({ one }) => ({
-  session: one(sessions, {
-    fields: [alerts.sessionId],
-    references: [sessions.id],
-  }),
-  family: one(families, {
-    fields: [alerts.familyId],
-    references: [families.id],
-  }),
-  child: one(children, {
-    fields: [alerts.childId],
-    references: [children.id],
-  }),
-  resolver: one(users, {
-    fields: [alerts.resolvedBy],
-    references: [users.id],
-  }),
-}));
-
-export const notificationsRelations = relations(notifications, ({ one }) => ({
-  user: one(users, {
-    fields: [notifications.userId],
-    references: [users.id],
-  }),
-}));
-
-export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
-  family: one(families, {
-    fields: [subscriptions.familyId],
-    references: [families.id],
-  }),
-}));
-
-export const pushTokensRelations = relations(pushTokens, ({ one }) => ({
-  user: one(users, {
-    fields: [pushTokens.userId],
-    references: [users.id],
-  }),
-}));
